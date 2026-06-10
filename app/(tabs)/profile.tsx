@@ -70,7 +70,7 @@ export default function ProfileScreen(){
             </View>;
           })}
         </View>
-        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,marginTop:8}}>{streak>0?`🔥 ${streak} day streak`:'No streak yet — log today to start!'}</Text>
+        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,marginTop:8}}>{streak>0?`${streak}-day streak${streak>=3?' · on a roll':''}`:'No streak yet — log today to start.'}</Text>
       </View>
 
       {/* Taste tags */}

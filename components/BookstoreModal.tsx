@@ -41,10 +41,10 @@ export default function BookstoreModal({visible,onClose}:Props){
           placeholder="Enter city or postcode…" placeholderTextColor={colors.text3} value={city} onChangeText={setCity}/>
         <View style={{flexDirection:'row',gap:8,marginBottom:spacing.lg}}>
           <TouchableOpacity onPress={openMaps} style={{flex:1,backgroundColor:colors.accent,padding:12,alignItems:'center'}}>
-            <Text style={{color:colors.bg,fontSize:12,fontWeight:'600'}}>📍 Open in Maps</Text>
+            <Text style={{fontFamily:fonts.sansBold,color:colors.bg,fontSize:12}}>Open in Maps</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={openIndieBound} style={{flex:1,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,padding:12,alignItems:'center'}}>
-            <Text style={{color:colors.text,fontSize:12}}>🏪 IndieBound</Text>
+            <Text style={{fontFamily:fonts.sans,color:colors.text,fontSize:12}}>IndieBound</Text>
           </TouchableOpacity>
         </View>
         {match.map(group=><View key={group.city} style={{marginBottom:spacing.lg}}>

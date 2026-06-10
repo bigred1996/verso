@@ -41,7 +41,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     const id=cur.id;
     useStore.setState(st=>({swipeData:{...st.swipeData,[id]:action}}));
     if(action==='like') setRating(id,4);
-    setLastAction(action==='like'?'❤️ Liked':(action==='dislike'?'✕ Passed':'↑ Later'));
+    setLastAction(action==='like'?'Liked':(action==='dislike'?'Passed':'Saved for later'));
     setTimeout(()=>setLastAction(null),800);
     pan.setValue({x:0,y:0});
   }
@@ -147,18 +147,18 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
           </View>
           <View style={{flexDirection:'row',gap:14,paddingVertical:spacing.md}}>
             <TouchableOpacity onPress={()=>flingOut('dislike')} style={[swBtn,{borderColor:'#A65A5A'}]}>
-              <Text style={{fontSize:24}}>✕</Text>
+              <Text style={{fontSize:22,color:'#C97B7B'}}>✕</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={()=>flingOut('next')} style={swBtn}>
-              <Text style={{fontSize:24}}>↑</Text>
+              <Text style={{fontSize:22,color:colors.text3}}>↑</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={()=>flingOut('like')} style={[swBtn,{borderColor:colors.accent}]}>
-              <Text style={{fontSize:24}}>❤️</Text>
+              <Text style={{fontSize:24,color:colors.accent}}>♥</Text>
             </TouchableOpacity>
           </View>
         </View>:<View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
-          <Text style={{fontSize:32,marginBottom:16}}>🎉</Text>
-          <Text style={{fontFamily:fonts.serifBold,fontSize:18,color:colors.text,marginBottom:8}}>All caught up!</Text>
+          <Text style={{fontFamily:fonts.serifItalic,fontSize:40,color:colors.accent,marginBottom:16}}>fin.</Text>
+          <Text style={{fontFamily:fonts.serifBold,fontSize:18,color:colors.text,marginBottom:8}}>All caught up</Text>
           <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center'}}>You've rated every book in the catalogue.{'\n'}Try Versus mode to refine your rankings.</Text>
         </View>}
       </View>}

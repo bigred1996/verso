@@ -109,7 +109,7 @@ export default function AddBookModal({visible,onClose}:Props){
             return <View key={doc.key} style={{flexDirection:'row',padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border,gap:12,alignItems:'center'}}>
               {doc.cover_i?<BookCover bookId={id} size="sm" olCoverId={doc.cover_i}/>:
                 <View style={{width:40,height:56,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'}}>
-                  <Text style={{fontSize:18,color:colors.text3}}>📖</Text>
+                  <Text style={{fontFamily:fonts.serifItalic,fontSize:20,color:colors.text3}}>{(doc.title||'?').trim()[0]||'?'}</Text>
                 </View>}
               <View style={{flex:1}}>
                 <Text style={{fontSize:13,color:colors.text,fontWeight:'600',marginBottom:2}} numberOfLines={2}>{doc.title}</Text>

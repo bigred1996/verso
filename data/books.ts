@@ -2,6 +2,53 @@ export type ShelfStatus = 'reading'|'read'|'want'|'dnf';
 export type Format = 'print'|'ebook'|'audio';
 export interface Book { id:string;title:string;author:string;year:number;genres:string[];synopsis:string;avgRating:number;readers:number;dist:number[];takes:{t:string;u:string}[];ci:number;isCustom?:boolean;olCoverId?:number|null;pages?:number; }
 export interface Friend { id:string;name:string;match:number;bookId:string;status:string;init:string;color:string; }
+export interface AuthorInfo { olid:string;wiki:string;born:string;bio:string;awards:string[];books:string[]; }
+export const AUTHOR_DATA:Record<string,AuthorInfo> = {
+  'Sally Rooney':{olid:'OL7353566A',wiki:'Sally_Rooney',born:'b. 1991, Castlebar, Ireland',
+    bio:"Sally Rooney is the defining voice of millennial literary fiction — sharp, political, and quietly devastating. Her novels dissect intimacy, class, and communication with an intelligence that reads as effortless and never is. Normal People made her famous; Intermezzo proved she was building something larger. She writes silence louder than most writers manage with full sentences.",
+    awards:['Booker Prize longlisted','Costa Novel Award','Sunday Times Young Writer of the Year'],
+    books:['normal-people','intermezzo','conversations-with-friends']},
+  'Kazuo Ishiguro':{olid:'OL24060A',wiki:'Kazuo_Ishiguro',born:'b. 1954, Nagasaki, Japan',
+    bio:"Kazuo Ishiguro is the master of the unreliable narrator who doesn't know he's unreliable. A Nobel laureate who writes novels about memory, loss, and the things people refuse to say. His prose is so controlled it feels inevitable — and the devastation arrives in retrospect, hours after you've finished. The Remains of the Day is 300 pages of a man refusing to feel anything, and you feel everything.",
+    awards:['Nobel Prize in Literature 2017','Booker Prize','CBE'],
+    books:['remains-of-the-day']},
+  'Cormac McCarthy':{olid:'OL1614185A',wiki:'Cormac_McCarthy',born:'1933–2023, Providence, RI',
+    bio:"Cormac McCarthy dispensed with punctuation and sentiment and wrote some of the most harrowing prose in American literature anyway. The Road is a novel about love written in the vocabulary of apocalypse. He decided commas were for cowards and somehow made it work. He died in 2023 having written the definitive book on what literary fiction can do with violence and grief.",
+    awards:['Pulitzer Prize','National Book Award','MacArthur Fellowship'],
+    books:['the-road']},
+  'Min Jin Lee':{olid:'OL3425513A',wiki:'Min_Jin_Lee',born:'b. 1968, Seoul, South Korea',
+    bio:"Min Jin Lee spent nearly 30 years researching and writing Pachinko — and you feel every year of it. Her fiction is about what history does to ordinary people, and how identity persists across generations of compromise and survival. She is one of the most important novelists working today.",
+    awards:['National Book Award finalist','Medici Book Club Prize','Dayton Literary Peace Prize'],
+    books:['pachinko']},
+  'Ottessa Moshfegh':{olid:'OL7022750A',wiki:'Ottessa_Moshfegh',born:'b. 1981, Boston, MA',
+    bio:"Ottessa Moshfegh writes characters who are repellent, brilliant, and impossible to look away from. My Year of Rest is her signature work: a meditation on numbness, privilege, and what happens when you remove all the noise. Her prose is surgical, deadpan, and funnier than it has any right to be. The horror is that you understand her protagonist completely.",
+    awards:['Booker Prize longlisted','PEN/Hemingway Award','Plimpton Prize'],
+    books:['my-year-of-rest']},
+  'John Williams':{olid:'OL27109A',wiki:'John_Edward_Williams',born:'1922–1994, Clarksville, TX',
+    bio:"John Williams published Stoner in 1965 to modest notice and died without knowing it would become one of the most beloved novels in the world. It is the story of an ordinary academic life, rendered with such compassion and precision that it becomes a meditation on what a life is worth. Stoner is the one people press into strangers' hands.",
+    awards:["National Book Award","National Book Award finalist (Stoner)"],
+    books:['stoner']},
+  'Don DeLillo':{olid:'OL1641141A',wiki:'Don_DeLillo',born:'b. 1936, Bronx, NY',
+    bio:"Don DeLillo has been diagnosing America's psychic condition since the 1970s with a precision that only becomes more accurate with time. White Noise is his most accessible novel and also his most prophetic: it identified the ambient dread of consumer capitalism forty years before it became the defining mood of the internet.",
+    awards:['National Book Award','PEN/Faulkner Award','Jerusalem Prize'],
+    books:['white-noise']},
+  'Hanya Yanagihara':{olid:'OL7353568A',wiki:'Hanya_Yanagihara',born:'b. 1974, Los Angeles, CA',
+    bio:"Hanya Yanagihara writes novels that refuse to make suffering comfortable or redemptive. A Little Life is a 720-page argument about what we owe the people we love, written with an intensity that readers describe as a kind of hazing. She dares you to put it down. Most readers cannot.",
+    awards:['Booker Prize finalist','National Book Award finalist','Kirkus Prize finalist'],
+    books:['a-little-life']},
+  'Barbara Kingsolver':{olid:'OL25705A',wiki:'Barbara_Kingsolver',born:'b. 1955, Annapolis, MD',
+    bio:"Barbara Kingsolver is one of the most morally serious novelists working in America. Demon Copperhead — her retelling of David Copperfield as an Appalachian opioid crisis narrative — won the Pulitzer and announced that she was angrier than Dickens and had better reason to be. The kid's voice is one of the great achievements in recent fiction.",
+    awards:['Pulitzer Prize','PEN/Bellwether Prize','National Book Award finalist'],
+    books:['demon-copperhead']},
+  'Percival Everett':{olid:'OL1398580A',wiki:'Percival_Everett',born:'b. 1956, Fort Gordon, GA',
+    bio:"Percival Everett has been one of the most formally inventive and intellectually rigorous novelists in America for decades without getting the attention he deserved. James changed that. It won the Pulitzer in 2024, and it is the book that explains why Everett has always mattered — a systematic, brilliant dismantling of American mythology from the inside.",
+    awards:['Pulitzer Prize 2024','PEN/Jean Stein Award','Guggenheim Fellowship'],
+    books:['james']},
+  'Viet Thanh Nguyen':{olid:'OL7115765A',wiki:'Viet_Thanh_Nguyen',born:'b. 1971, Buon Ma Thuot, Vietnam',
+    bio:"Viet Thanh Nguyen is a professor of English and American studies at USC and a novelist who refuses to let comfortable narratives stand. The Sympathizer is a Pulitzer Prize-winning novel told from inside a communist spy's confession, simultaneously inhabiting both sides of the Vietnam War.",
+    awards:['Pulitzer Prize','Dayton Literary Peace Prize','Edgar Award'],
+    books:['the-sympathizer']},
+};
 export const ISBNS:Record<string,string> = {'normal-people':'9780571334650','conversations-with-friends':'9780571333134','intermezzo':'9780374611996','a-little-life':'9780316301930','stoner':'9781590170014','the-road':'9780307387899','remains-of-the-day':'9780679731726','white-noise':'9780143105985','pachinko':'9781455563937','my-year-of-rest':'9780525522089','demon-copperhead':'9780063251922','james':'9780385550369','the-sympathizer':'9780802123459'};
 export const COVER_IDS:Record<string,number> = {'my-year-of-rest':8202400,'stoner':8310729,'intermezzo':14836043};
 export const PAGE_COUNTS:Record<string,number> = {'normal-people':273,'conversations-with-friends':321,'intermezzo':384,'a-little-life':720,'stoner':278,'the-road':287,'remains-of-the-day':256,'white-noise':326,'pachinko':496,'my-year-of-rest':304,'demon-copperhead':548,'james':320,'the-sympathizer':371};
