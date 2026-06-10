@@ -5,6 +5,9 @@ import type { ShelfStatus, Format, Book } from '../data/books';
 export interface RereadEntry { date:string;rating:number;note:string; }
 export interface Review { hotTake?:string; overall?:string; best?:string; forWhom?:string; date:string; }
 export interface BuddyRead { bookId:string; partner:string; myPage:number; theirPage:number; note:string; }
+export interface BookList { id:string; name:string; desc:string; bookIds:string[]; }
+export interface UserClub { id:string; name:string; bookId:string; }
+export interface UserChallenge { id:string; title:string; desc:string; goal:number; }
 export interface JournalEntry { date:string;page:number;note:string; }
 export interface JournalData  { page:number;entries:JournalEntry[]; }
 interface State {
@@ -20,6 +23,10 @@ interface State {
   annualGoal:number;
   authorFollows:Record<string,boolean>;
   bookMoods:Record<string,{moods:string[];pace:string}>; // current user's post-rating tally
+  lists:BookList[];
+  userClubs:UserClub[];
+  userChallenges:UserChallenge[];
+  statsHidden:Record<string,boolean>;
   setShelf:(id:string,s:ShelfStatus|null)=>void;
   setRating:(id:string,v:number)=>void;
   setFormat:(id:string,f:Format|null)=>void;
@@ -41,6 +48,12 @@ interface State {
   setAnnualGoal:(n:number)=>void;
   toggleAuthorFollow:(name:string)=>void;
   setBookMoods:(id:string,moods:string[],pace:string)=>void;
+  createList:(name:string,desc?:string)=>void;
+  toggleListBook:(listId:string,bookId:string)=>void;
+  deleteList:(listId:string)=>void;
+  createClub:(name:string,bookId:string)=>void;
+  createChallenge:(title:string,desc:string,goal:number)=>void;
+  toggleStat:(key:string)=>void;
 }
 export const MOODS=['dark','emotional','reflective','tense','mysterious','funny','hopeful','adventurous','lighthearted','inspiring','sad'];
 export const PACES=['slow burn','measured','propulsive'];
@@ -61,6 +74,8 @@ export const useStore = create<State>()(persist((set)=>({
   buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
   favorites:['stoner','remains-of-the-day','pachinko'],
   dnfReasons:{}, annualGoal:30, authorFollows:{'Sally Rooney':true,'Kazuo Ishiguro':true}, bookMoods:{},
+  lists:[{id:'comfort',name:'Comfort Re-reads',desc:'For when the world is too much.',bookIds:['stoner','remains-of-the-day','gilead']},{id:'gut-punch',name:'Books That Wrecked Me',desc:'Read at your own risk.',bookIds:['a-little-life','never-let-me-go','beloved']}],
+  userClubs:[], userChallenges:[], statsHidden:{},
   setShelf:(id,s)=>set(st=>{ const sh={...st.shelf}; if(s===null) delete sh[id]; else sh[id]=s; return {shelf:sh}; }),
   setRating:(id,v)=>set(st=>({ratings:{...st.ratings,[id]:v}})),
   setFormat:(id,f)=>set(st=>{ const fm={...st.formats}; if(f===null) delete fm[id]; else fm[id]=f; return {formats:fm}; }),
@@ -86,6 +101,12 @@ export const useStore = create<State>()(persist((set)=>({
   setAnnualGoal:(n)=>set(()=>({annualGoal:Math.max(1,n)})),
   toggleAuthorFollow:(name)=>set(st=>({authorFollows:{...st.authorFollows,[name]:!st.authorFollows[name]}})),
   setBookMoods:(id,moods,pace)=>set(st=>({bookMoods:{...st.bookMoods,[id]:{moods,pace}}})),
+  createList:(name,desc)=>set(st=>({lists:[{id:'list-'+st.lists.length+'-'+name.replace(/\s+/g,'-').toLowerCase().slice(0,16),name,desc:desc||'',bookIds:[]},...st.lists]})),
+  toggleListBook:(listId,bookId)=>set(st=>({lists:st.lists.map(l=>l.id!==listId?l:{...l,bookIds:l.bookIds.includes(bookId)?l.bookIds.filter(b=>b!==bookId):[...l.bookIds,bookId]})})),
+  deleteList:(listId)=>set(st=>({lists:st.lists.filter(l=>l.id!==listId)})),
+  createClub:(name,bookId)=>set(st=>({userClubs:[{id:'club-'+st.userClubs.length+'-'+name.replace(/\s+/g,'-').toLowerCase().slice(0,16),name,bookId},...st.userClubs]})),
+  createChallenge:(title,desc,goal)=>set(st=>({userChallenges:[{id:'ch-'+st.userChallenges.length+'-'+title.replace(/\s+/g,'-').toLowerCase().slice(0,16),title,desc,goal},...st.userChallenges]})),
+  toggleStat:(key)=>set(st=>({statsHidden:{...st.statsHidden,[key]:!st.statsHidden[key]}})),
   sendClubMessage:(clubId,text)=>set(st=>{
     const msgs=st.clubMessages[clubId]||[];
     const ts=TODAY();

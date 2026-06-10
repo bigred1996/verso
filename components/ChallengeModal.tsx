@@ -8,9 +8,11 @@ import BookCover from './BookCover';
 interface Props { challengeId:string|null; onClose:()=>void; onOpenBook:(id:string)=>void; }
 
 export default function ChallengeModal({challengeId,onClose,onOpenBook}:Props){
-  const {challengeJoined,joinChallenge,customBooks}=useStore();
+  const {challengeJoined,joinChallenge,customBooks,userChallenges}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
-  const ch=challengeId?CHALLENGES.find(c=>c.id===challengeId):null;
+  const base=challengeId?CHALLENGES.find(c=>c.id===challengeId):null;
+  const userCh=!base&&challengeId?userChallenges.find(c=>c.id===challengeId):null;
+  const ch=base||(userCh?{id:userCh.id,title:userCh.title,desc:userCh.desc,readers:1,goal:userCh.goal,featured:false,books:[] as string[],done:[] as string[]}:null);
   if(!ch) return null;
   const joined=!!challengeJoined[ch.id];
   const done=new Set(ch.done);

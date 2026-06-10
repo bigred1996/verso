@@ -22,7 +22,7 @@ const HOT_PLACEHOLDERS=[
 interface Props { bookId:string|null; onClose:()=>void; }
 
 export default function BookDetailModal({bookId,onClose}:Props){
-  const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,favorites,dnfReasons,bookMoods,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead,toggleFavorite,setDnfReason,setBookMoods}=useStore();
+  const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,favorites,dnfReasons,bookMoods,lists,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead,toggleFavorite,setDnfReason,setBookMoods,toggleListBook}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
 
   // Internal active id so tapping a book inside the author sheet navigates here
@@ -263,6 +263,15 @@ export default function BookDetailModal({bookId,onClose}:Props){
             <TouchableOpacity onPress={addTag} style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,paddingHorizontal:14,justifyContent:'center'}}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text}}>Add</Text></TouchableOpacity>
           </View>
         </View>
+
+        {/* Lists */}
+        {lists.length>0&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={[type.label,{marginBottom:10}]}>Add to a List</Text>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+            {lists.map(l=>{const inList=l.bookIds.includes(bid);return <TouchableOpacity key={l.id} onPress={()=>toggleListBook(l.id,bid)}
+              style={[chip,inList&&activeChip]}><Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:inList?colors.accent:colors.text2}}>{inList?'✓ ':''}{l.name}</Text></TouchableOpacity>;})}
+          </View>
+        </View>}
 
         {/* Share */}
         <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>

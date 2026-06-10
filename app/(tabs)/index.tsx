@@ -19,6 +19,7 @@ export default function DiscoverScreen(){
   const [detailId,setDetailId]=useState<string|null>(null);
   const [showSwipe,setShowSwipe]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
+  const [addPrefill,setAddPrefill]=useState('');
   const [moods,setMoods]=useState<string[]>([]);
   const [pace,setPace]=useState<string|null>(null);
   const [zTab,setZTab]=useState<'trending'|'new'>('trending');
@@ -85,7 +86,11 @@ export default function DiscoverScreen(){
       {searching?<View>
         <Text style={[type.label,{padding:spacing.lg,paddingBottom:8}]}>{results.length} result{results.length!==1?'s':''}</Text>
         {results.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>★ {b.avgRating||'—'}{BOOK_VIBES[b.id]?` · ${BOOK_VIBES[b.id].pace}`:''}</Text>}/>)}
-        {results.length===0&&<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>No matches. Either we don't have it yet, or you invented a book.</Text>}
+        {/* Add-from-search: always offer when searching, prominent when nothing matches */}
+        <TouchableOpacity onPress={()=>{setAddPrefill(q.trim());setShowAdd(true);}} style={{margin:spacing.lg,padding:14,borderWidth:1,borderColor:colors.accent,backgroundColor:colors.accentDim,alignItems:'center'}}>
+          <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.accent}}>{results.length?'Not the right one? ':''}Add "{q.trim()}" to Verso →</Text>
+        </TouchableOpacity>
+        {results.length===0&&<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingHorizontal:spacing.xl}}>We don't have it yet — but we can. Tap above and we'll pull it from Open Library.</Text>}
       </View>:<>
 
       {/* FOR YOU */}
@@ -186,7 +191,7 @@ export default function DiscoverScreen(){
 
     <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
     {showSwipe&&<SwipeModal visible onClose={()=>setShowSwipe(false)} onOpenBook={id=>{setShowSwipe(false);setDetailId(id);}}/>}
-    {showAdd&&<AddBookModal visible onClose={()=>setShowAdd(false)}/>}
+    {showAdd&&<AddBookModal visible prefill={addPrefill} onClose={()=>{setShowAdd(false);setAddPrefill('');}}/>}
   </SafeAreaView>;
 }
 const card:any={marginHorizontal:spacing.lg,marginTop:spacing.md,marginBottom:spacing.sm,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,flexDirection:'row',alignItems:'center'};

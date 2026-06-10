@@ -6,8 +6,10 @@ import {useStore} from '../../store';
 import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
 import StatsView from '../../components/StatsView';
+import ListsView from '../../components/ListsView';
+import ProfilePanel from '../../components/ProfilePanel';
 
-const SUBS=['Stats','Shelves','Rankings','Journal','Favorites'] as const;
+const SUBS=['Stats','Shelves','Lists','Rankings','Journal','Favorites','Profile'] as const;
 type Sub=typeof SUBS[number];
 const SHELF_TABS=[{k:'read',l:'Read'},{k:'reading',l:'Reading'},{k:'want',l:'TBR'},{k:'dnf',l:'DNF'}] as const;
 const SORTS=['Date','Title','Author','Rating'] as const;
@@ -116,6 +118,8 @@ export default function ShelfScreen(){
 
     <ScrollView showsVerticalScrollIndicator={false}>
       {sub==='Stats'&&<StatsView/>}
+      {sub==='Lists'&&<ListsView onOpenBook={setDetailId}/>}
+      {sub==='Profile'&&<ProfilePanel/>}
       {sub==='Rankings'&&<Rankings/>}
       {sub==='Journal'&&<Journal/>}
       {sub==='Favorites'&&<Favorites/>}

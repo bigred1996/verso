@@ -1,4 +1,4 @@
-import React from 'react';
+import React,{useState} from 'react';
 import {View,Text,TouchableOpacity} from 'react-native';
 import Svg,{Circle,Polyline,Text as SvgText} from 'react-native-svg';
 import {colors,spacing,fonts,type} from '../constants/theme';
@@ -18,8 +18,26 @@ function Bars({rows,labelWidth=90}:{rows:{l:string;p:number;v?:string}[];labelWi
   </View>)}</View>;
 }
 
+const SECTIONS:{key:string;label:string}[]=[
+  {key:'wrap',label:'Your Year, So Far'},
+  {key:'glance',label:'Year at a Glance'},
+  {key:'velocity',label:'Reading Velocity'},
+  {key:'pace',label:'Pace Breakdown'},
+  {key:'mood',label:'Mood Breakdown'},
+  {key:'genre',label:'Genre Breakdown'},
+  {key:'rating',label:'How You Rate'},
+  {key:'month',label:'Books by Month'},
+  {key:'decade',label:'When Were They Written'},
+  {key:'streak',label:'Reading Streak'},
+  {key:'tropes',label:'Your Tropes'},
+  {key:'profile',label:'Reader Profile'},
+  {key:'goal',label:'Annual Reading Goal'},
+];
+
 export default function StatsView(){
-  const {shelf,ratings,customBooks,annualGoal,setAnnualGoal}=useStore();
+  const {shelf,ratings,customBooks,annualGoal,setAnnualGoal,statsHidden,toggleStat}=useStore();
+  const [customize,setCustomize]=useState(false);
+  const show=(k:string)=>!statsHidden[k];
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const read=all.filter(b=>shelf[b.id]==='read');
   const dnf=all.filter(b=>shelf[b.id]==='dnf');
@@ -66,14 +84,30 @@ export default function StatsView(){
   const tropes=Object.entries(tropeCounts).sort((a,b)=>b[1]-a[1]).slice(0,12);
 
   return <View>
+    {/* Customize header */}
+    <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:customize?0:spacing.md}}>
+      <Text style={type.label}>Statistics</Text>
+      <TouchableOpacity onPress={()=>setCustomize(c=>!c)} style={{paddingHorizontal:10,paddingVertical:5,borderWidth:1,borderColor:customize?colors.accent:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:customize?colors.accent:colors.text3}}>{customize?'Done':'Customize'}</Text>
+      </TouchableOpacity>
+    </View>
+    {customize&&<View style={[sec,{paddingTop:spacing.md}]}>
+      <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginBottom:12}}>Tap a section to show or hide it. Build the stats page you actually want.</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+        {SECTIONS.map(s=>{const on=show(s.key);return <TouchableOpacity key={s.key} onPress={()=>toggleStat(s.key)} style={{paddingHorizontal:11,paddingVertical:7,backgroundColor:on?colors.accentDim:colors.surface2,borderWidth:1,borderColor:on?colors.accent:colors.border}}>
+          <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:on?colors.accent:colors.text3}}>{on?'✓ ':''}{s.label}</Text>
+        </TouchableOpacity>;})}
+      </View>
+    </View>}
+
     {/* Wrap-up card */}
-    <View style={[sec,{backgroundColor:colors.surface}]}>
+    {show('wrap')&&<View style={[sec,{backgroundColor:colors.surface}]}>
       <Text style={[type.label,{marginBottom:10}]}>Your 2026, So Far</Text>
       <Text style={{fontFamily:fonts.serif,fontSize:15,color:colors.text,lineHeight:24}}>{wrap}</Text>
-    </View>
+    </View>}
 
     {/* Year at a glance */}
-    <View style={sec}>
+    {show('glance')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Year at a Glance · 2026</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
         {[{v:String(read.length),l:'Books read'},{v:pages>=1000?(pages/1000).toFixed(1)+'k':String(pages),l:'Pages read'},{v:avg+(avg!=='—'?' ★':''),l:'Avg rating'},{v:String(dnf.length),l:"DNF'd"}].map(c=>
@@ -83,19 +117,19 @@ export default function StatsView(){
           </View>)}
       </View>
       {avg!=='—'&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:12}}>Your {avg}★ average is {avgNum>=COMMUNITY_AVG?'above':'below'} the Verso community's {COMMUNITY_AVG}★ — {avgNum>=COMMUNITY_AVG?'a soft touch':'a hard marker'}.</Text>}
-    </View>
+    </View>}
 
     {/* Reading velocity sparkline */}
-    <View style={sec}>
+    {show('velocity')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Reading Velocity</Text>
       <Svg width="100%" height={44} viewBox="0 0 240 44">
         <Polyline points={spark} fill="none" stroke={colors.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
       </Svg>
       <Text style={quote}>"Books per month. Peaks are good months. Troughs are honest."</Text>
-    </View>
+    </View>}
 
     {/* Pace donut */}
-    <View style={sec}>
+    {show('pace')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Pace Breakdown</Text>
       <View style={{flexDirection:'row',alignItems:'center',gap:20}}>
         <Svg width={120} height={120} viewBox="0 0 120 120">
@@ -114,30 +148,30 @@ export default function StatsView(){
         </View>
       </View>
       <Text style={quote}>"Infinite patience for a slow burn. Respect."</Text>
-    </View>
+    </View>}
 
     {/* Mood */}
-    <View style={sec}>
+    {show('mood')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Mood Breakdown</Text>
       <Bars rows={[{l:'emotional',p:68},{l:'dark',p:52},{l:'reflective',p:47},{l:'tense',p:29},{l:'sad',p:24},{l:'mysterious',p:18},{l:'funny',p:12}]}/>
       <Text style={quote}>"You have a type. It's called feelings."</Text>
-    </View>
+    </View>}
 
     {/* Genre */}
-    <View style={sec}>
+    {show('genre')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Genre Breakdown</Text>
       <Bars labelWidth={110} rows={[{l:'Literary Fiction',p:72},{l:'Contemporary',p:33},{l:'Historical',p:21},{l:'Translated',p:17},{l:'Short Stories',p:8}]}/>
-    </View>
+    </View>}
 
     {/* Rating distribution (live) */}
-    <View style={sec}>
+    {show('rating')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>How You Rate</Text>
       <Bars labelWidth={28} rows={ratingCounts.map(d=>({l:d.s+'★',p:Math.round(d.n/maxR*100),v:String(d.n)}))}/>
       <Text style={quote}>"Mostly 4s and 5s. Either discerning, or you DNF the ones you'd hate."</Text>
-    </View>
+    </View>}
 
     {/* Books by month */}
-    <View style={sec}>
+    {show('month')&&<View style={sec}>
       <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'baseline',marginBottom:14}}>
         <Text style={type.label}>Books by Month</Text>
         <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accent}}>2026</Text>
@@ -149,10 +183,10 @@ export default function StatsView(){
         </View>)}
       </View>
       <Text style={quote}>"June is looking like your best month yet."</Text>
-    </View>
+    </View>}
 
     {/* Decades */}
-    <View style={sec}>
+    {show('decade')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>When Were They Written?</Text>
       {decades.map(d=><View key={d.d} style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:8}}>
         <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,width:48}}>{d.d}</Text>
@@ -160,19 +194,19 @@ export default function StatsView(){
         <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,width:18,textAlign:'right'}}>{d.n}</Text>
       </View>)}
       <Text style={quote}>"Mostly contemporary. You like your fiction breathing."</Text>
-    </View>
+    </View>}
 
     {/* Reading streak grid */}
-    <View style={sec}>
+    {show('streak')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Reading Streak · 12 weeks</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:3,maxWidth:7*16}}>
         {base.map((v,i)=><View key={i} style={{width:13,height:13,backgroundColor:v?colors.accent:colors.surface2,opacity:v?1:1}}/>)}
       </View>
       <Text style={quote}>"Consistency beats intensity. You've got both."</Text>
-    </View>
+    </View>}
 
     {/* Tropes cloud */}
-    {tropes.length>0&&<View style={sec}>
+    {show('tropes')&&tropes.length>0&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Your Tropes</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:7}}>
         {tropes.map(([t,n])=><View key={t} style={{paddingHorizontal:10,paddingVertical:5,backgroundColor:n>=3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:n>=3?'rgba(61,107,72,0.4)':colors.border}}>
@@ -183,17 +217,17 @@ export default function StatsView(){
     </View>}
 
     {/* Reader profile */}
-    <View style={sec}>
+    {show('profile')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Your Reader Profile</Text>
       <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24,marginBottom:10}}>You gravitate toward <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>slow-burn literary fiction</Text> with emotionally devastating payoffs. You have a high tolerance for <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>unreliable narrators</Text> and an unusual appetite for books that make you feel worse about everything.</Text>
       <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24}}>Your comfort zone: <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>Ireland, New York, and anywhere with repressed feelings</Text>. You read for prose over plot, and you have never once picked up a thriller.</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginTop:14}}>
         {FRIENDS.filter(f=>f.match>=70).map(f=><Text key={f.id} style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}}>{f.name.split(' ')[0]} <Text style={{color:colors.accent}}>{f.match}%</Text>{'   '}</Text>)}
       </View>
-    </View>
+    </View>}
 
     {/* Goal ring */}
-    <View style={[sec,{borderBottomWidth:0,alignItems:'center'}]}>
+    {show('goal')&&<View style={[sec,{borderBottomWidth:0,alignItems:'center'}]}>
       <Text style={[type.label,{marginBottom:14,alignSelf:'flex-start'}]}>Annual Reading Goal</Text>
       <Svg width={140} height={140} viewBox="0 0 140 140">
         <Circle cx={70} cy={70} r={GR} fill="none" stroke={colors.surface2} strokeWidth={9}/>
@@ -207,7 +241,7 @@ export default function StatsView(){
         <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text2}}>Goal: {GOAL}</Text>
         <TouchableOpacity onPress={()=>setAnnualGoal(GOAL+1)} style={{width:34,height:34,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:18,color:colors.text2}}>+</Text></TouchableOpacity>
       </View>
-    </View>
+    </View>}
     <View style={{height:24}}/>
   </View>;
 }

@@ -1,14 +1,14 @@
-import React,{useState,useRef} from 'react';
+import React,{useState,useRef,useEffect} from 'react';
 import {Modal,View,Text,TextInput,TouchableOpacity,ScrollView,SafeAreaView,StatusBar,ActivityIndicator} from 'react-native';
 import {colors,spacing,fonts} from '../constants/theme';
 import {useStore} from '../store';
 import type {Book} from '../data/books';
 import BookCover from './BookCover';
 
-interface Props { visible:boolean; onClose:()=>void; }
+interface Props { visible:boolean; onClose:()=>void; prefill?:string; }
 interface OLDoc { key:string;title:string;author_name?:string[];first_publish_year?:number;number_of_pages_median?:number;cover_i?:number; }
 
-export default function AddBookModal({visible,onClose}:Props){
+export default function AddBookModal({visible,onClose,prefill}:Props){
   const {addCustomBook}=useStore();
   const [tab,setTab]=useState<'search'|'manual'>('search');
   const [q,setQ]=useState('');
@@ -25,6 +25,9 @@ export default function AddBookModal({visible,onClose}:Props){
   const [mGenre,setMGenre]=useState('');
   const [mISBN,setMISBN]=useState('');
   const [manualDone,setManualDone]=useState(false);
+
+  // Prefill the search from a Discover query when opened
+  useEffect(()=>{ if(visible&&prefill){ handleSearch(prefill); setMTitle(prefill); } },[visible,prefill]);
 
   function handleSearch(text:string){
     setQ(text);

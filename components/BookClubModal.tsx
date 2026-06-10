@@ -1,4 +1,4 @@
-import React,{useState,useRef} from 'react';
+import React,{useState,useRef,useEffect} from 'react';
 import {Modal,View,Text,TouchableOpacity,ScrollView,TextInput,KeyboardAvoidingView,Platform,SafeAreaView,StatusBar} from 'react-native';
 import {colors,spacing,fonts} from '../constants/theme';
 import {BOOKS} from '../data/books';
@@ -19,16 +19,20 @@ const DEFAULT_CLUBS:Club[]=[
    chat:[{user:'Priya',text:'I warned everyone this would be painful.',ts:'Jun 5',page:1},{user:'Marcus',text:'Three chapters in and I already need therapy.',ts:'Jun 6',page:60},{user:'Marcus',text:'The midpoint reveal. I have to lie down.',ts:'Jun 7',page:380}]},
 ];
 
-interface Props { visible:boolean; onClose:()=>void; onOpenBook:(id:string)=>void; }
+interface Props { visible:boolean; onClose:()=>void; onOpenBook:(id:string)=>void; initialClubId?:string|null; }
 
-export default function BookClubModal({visible,onClose,onOpenBook}:Props){
-  const {sendClubMessage,clubMessages}=useStore();
+export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}:Props){
+  const {sendClubMessage,clubMessages,userClubs,customBooks}=useStore();
   const [activeClub,setActiveClub]=useState<string|null>(null);
   const [msg,setMsg]=useState('');
   const scrollRef=useRef<ScrollView>(null);
+  const allBooks=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
 
-  const club=activeClub?DEFAULT_CLUBS.find(c=>c.id===activeClub):null;
-  const allBooks=[...BOOKS,...(useStore.getState().customBooks||[])];
+  // Merge seeded clubs with user-created ones
+  const CLUBS:Club[]=[...DEFAULT_CLUBS,...userClubs.map(c=>({id:c.id,name:c.name,bookId:c.bookId,members:[] as string[],progress:{You:0},goal:allBooks.find(b=>b.id===c.bookId)?.pages||400,chat:[] as Club['chat']}))];
+  useEffect(()=>{ if(visible&&initialClubId) setActiveClub(initialClubId); },[visible,initialClubId]);
+
+  const club=activeClub?CLUBS.find(c=>c.id===activeClub):null;
   const book=club?allBooks.find(b=>b.id===club.bookId):null;
 
   // Merge static chat with store messages
@@ -54,7 +58,7 @@ export default function BookClubModal({visible,onClose,onOpenBook}:Props){
 
       {!activeClub&&<ScrollView contentContainerStyle={{padding:spacing.lg,gap:12}}>
         <Text style={sec}>Your Clubs</Text>
-        {DEFAULT_CLUBS.map(c=>{
+        {CLUBS.map(c=>{
           const b=allBooks.find(x=>x.id===c.bookId);
           const myProg=c.progress.You||0;
           const pct=Math.round(myProg/c.goal*100);
