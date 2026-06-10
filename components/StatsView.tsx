@@ -1,9 +1,11 @@
 import React from 'react';
-import {View,Text} from 'react-native';
-import Svg,{Circle,Text as SvgText} from 'react-native-svg';
+import {View,Text,TouchableOpacity} from 'react-native';
+import Svg,{Circle,Polyline,Text as SvgText} from 'react-native-svg';
 import {colors,spacing,fonts,type} from '../constants/theme';
 import {BOOKS,PAGE_COUNTS,BOOK_TAGS,FRIENDS} from '../data/books';
 import {useStore} from '../store';
+
+const COMMUNITY_AVG=4.1;
 
 const sec={padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border};
 const quote:any={fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3,lineHeight:18,marginTop:10,paddingLeft:10,borderLeftWidth:2,borderLeftColor:colors.text3};
@@ -17,7 +19,7 @@ function Bars({rows,labelWidth=90}:{rows:{l:string;p:number;v?:string}[];labelWi
 }
 
 export default function StatsView(){
-  const {shelf,ratings,customBooks,streakDays}=useStore();
+  const {shelf,ratings,customBooks,annualGoal,setAnnualGoal}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const read=all.filter(b=>shelf[b.id]==='read');
   const dnf=all.filter(b=>shelf[b.id]==='dnf');
@@ -43,9 +45,16 @@ export default function StatsView(){
   const decades=[{d:'1940s',n:1},{d:'1960s',n:1},{d:'1980s',n:2},{d:'2000s',n:3},{d:'2010s',n:8},{d:'2020s',n:9}];
   const maxD=Math.max(...decades.map(d=>d.n));
 
-  // goal ring
-  const GOAL=30,done=read.length||7,gp=Math.min(1,done/GOAL),GR=52,GC=2*Math.PI*GR;
+  // goal ring (settable)
+  const GOAL=annualGoal,done=read.length||7,gp=Math.min(1,done/GOAL),GR=52,GC=2*Math.PI*GR;
   const gfill=gp*GC;
+
+  // velocity sparkline points (books/month, 12 pts in a 240x40 box)
+  const vMax=Math.max(...months.map(m=>m.n),1);
+  const spark=months.map((m,i)=>`${(i/(months.length-1))*236+2},${38-(m.n/vMax)*34}`).join(' ');
+
+  const avgNum=vals.length?parseFloat(avg):0;
+  const wrap=`So far in 2026 you've read ${done} book${done!==1?'s':''} (${pages.toLocaleString()} pages), rating them ${avg!=='—'?avg+'★ on average — '+(avgNum>=COMMUNITY_AVG?'more generous':'tougher')+' than the Verso crowd':'as yet unrated'}. You lean slow-burn and emotionally devastating, you DNF'd ${dnf.length}, and you're ${Math.round(gp*100)}% of the way to your goal of ${GOAL}. Slow down; you have all year.`;
 
   // 12-week streak grid from streakDays + a seeded base
   const base=[1,1,1,0,1,0,0, 1,1,1,1,0,1,0, 1,0,1,1,1,0,0, 1,1,1,0,1,1,0, 1,0,1,1,1,1,1, 0,1,1,1,0,1,0];
@@ -57,6 +66,12 @@ export default function StatsView(){
   const tropes=Object.entries(tropeCounts).sort((a,b)=>b[1]-a[1]).slice(0,12);
 
   return <View>
+    {/* Wrap-up card */}
+    <View style={[sec,{backgroundColor:colors.surface}]}>
+      <Text style={[type.label,{marginBottom:10}]}>Your 2026, So Far</Text>
+      <Text style={{fontFamily:fonts.serif,fontSize:15,color:colors.text,lineHeight:24}}>{wrap}</Text>
+    </View>
+
     {/* Year at a glance */}
     <View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Year at a Glance · 2026</Text>
@@ -67,6 +82,16 @@ export default function StatsView(){
             <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,marginTop:4}}>{c.l}</Text>
           </View>)}
       </View>
+      {avg!=='—'&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:12}}>Your {avg}★ average is {avgNum>=COMMUNITY_AVG?'above':'below'} the Verso community's {COMMUNITY_AVG}★ — {avgNum>=COMMUNITY_AVG?'a soft touch':'a hard marker'}.</Text>}
+    </View>
+
+    {/* Reading velocity sparkline */}
+    <View style={sec}>
+      <Text style={[type.label,{marginBottom:14}]}>Reading Velocity</Text>
+      <Svg width="100%" height={44} viewBox="0 0 240 44">
+        <Polyline points={spark} fill="none" stroke={colors.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+      </Svg>
+      <Text style={quote}>"Books per month. Peaks are good months. Troughs are honest."</Text>
     </View>
 
     {/* Pace donut */}
@@ -176,7 +201,12 @@ export default function StatsView(){
         <SvgText x={70} y={66} textAnchor="middle" fontSize={30} fontStyle="italic" fontWeight="bold" fill={colors.text}>{done}</SvgText>
         <SvgText x={70} y={86} textAnchor="middle" fontSize={10} fill={colors.text3}>of {GOAL} books</SvgText>
       </Svg>
-      <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,marginTop:10}}>{Math.round(gp*100)}% there — {GOAL-done} to go</Text>
+      <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,marginTop:10}}>{Math.round(gp*100)}% there — {Math.max(0,GOAL-done)} to go</Text>
+      <View style={{flexDirection:'row',alignItems:'center',gap:16,marginTop:14}}>
+        <TouchableOpacity onPress={()=>setAnnualGoal(GOAL-1)} style={{width:34,height:34,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:18,color:colors.text2}}>−</Text></TouchableOpacity>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text2}}>Goal: {GOAL}</Text>
+        <TouchableOpacity onPress={()=>setAnnualGoal(GOAL+1)} style={{width:34,height:34,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'}}><Text style={{fontSize:18,color:colors.text2}}>+</Text></TouchableOpacity>
+      </View>
     </View>
     <View style={{height:24}}/>
   </View>;

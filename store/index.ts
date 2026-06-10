@@ -15,6 +15,11 @@ interface State {
   clubMessages:Record<string,{user:string;text:string;ts:string}[]>;
   reviews:Record<string,Review>;
   buddyReads:BuddyRead[];
+  favorites:string[];
+  dnfReasons:Record<string,{reason:string;page:number}>;
+  annualGoal:number;
+  authorFollows:Record<string,boolean>;
+  bookMoods:Record<string,{moods:string[];pace:string}>; // current user's post-rating tally
   setShelf:(id:string,s:ShelfStatus|null)=>void;
   setRating:(id:string,v:number)=>void;
   setFormat:(id:string,f:Format|null)=>void;
@@ -31,7 +36,15 @@ interface State {
   startBuddyRead:(bookId:string,partner:string)=>void;
   endBuddyRead:(bookId:string)=>void;
   joinChallenge:(id:string)=>void;
+  toggleFavorite:(id:string)=>void;
+  setDnfReason:(id:string,reason:string,page:number)=>void;
+  setAnnualGoal:(n:number)=>void;
+  toggleAuthorFollow:(name:string)=>void;
+  setBookMoods:(id:string,moods:string[],pace:string)=>void;
 }
+export const MOODS=['dark','emotional','reflective','tense','mysterious','funny','hopeful','adventurous','lighthearted','inspiring','sad'];
+export const PACES=['slow burn','measured','propulsive'];
+export const DNF_REASONS=['Not for me','Wrong time','Life happened','Actively bad','Too slow','Too fast'];
 const TODAY=()=>{const d=new Date(2026,5,9);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();};
 const ELO_K=32;
 function calcElo(a:number,b:number,aWon:boolean){
@@ -46,6 +59,8 @@ export const useStore = create<State>()(persist((set)=>({
   userTags:{}, customBooks:[], follows:{}, challengeJoined:{'literary-dozen':true},
   swipeData:{}, eloRatings:{}, streakDays:[], clubMessages:{}, reviews:{},
   buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
+  favorites:['stoner','remains-of-the-day','pachinko'],
+  dnfReasons:{}, annualGoal:30, authorFollows:{'Sally Rooney':true,'Kazuo Ishiguro':true}, bookMoods:{},
   setShelf:(id,s)=>set(st=>{ const sh={...st.shelf}; if(s===null) delete sh[id]; else sh[id]=s; return {shelf:sh}; }),
   setRating:(id,v)=>set(st=>({ratings:{...st.ratings,[id]:v}})),
   setFormat:(id,f)=>set(st=>{ const fm={...st.formats}; if(f===null) delete fm[id]; else fm[id]=f; return {formats:fm}; }),
@@ -66,6 +81,11 @@ export const useStore = create<State>()(persist((set)=>({
   startBuddyRead:(bookId,partner)=>set(st=>({buddyReads:[...st.buddyReads.filter(b=>b.bookId!==bookId),{bookId,partner,myPage:0,theirPage:0,note:'Just getting started.'}]})),
   endBuddyRead:(bookId)=>set(st=>({buddyReads:st.buddyReads.filter(b=>b.bookId!==bookId)})),
   joinChallenge:(id)=>set(st=>({challengeJoined:{...st.challengeJoined,[id]:!st.challengeJoined[id]}})),
+  toggleFavorite:(id)=>set(st=>{const has=st.favorites.includes(id);if(has)return {favorites:st.favorites.filter(f=>f!==id)};return {favorites:[...st.favorites,id]};}),
+  setDnfReason:(id,reason,page)=>set(st=>({dnfReasons:{...st.dnfReasons,[id]:{reason,page}}})),
+  setAnnualGoal:(n)=>set(()=>({annualGoal:Math.max(1,n)})),
+  toggleAuthorFollow:(name)=>set(st=>({authorFollows:{...st.authorFollows,[name]:!st.authorFollows[name]}})),
+  setBookMoods:(id,moods,pace)=>set(st=>({bookMoods:{...st.bookMoods,[id]:{moods,pace}}})),
   sendClubMessage:(clubId,text)=>set(st=>{
     const msgs=st.clubMessages[clubId]||[];
     const ts=TODAY();

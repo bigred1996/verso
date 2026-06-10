@@ -1,145 +1,194 @@
 import React,{useState} from 'react';
-import {ScrollView,View,Text,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
+import {ScrollView,View,Text,TextInput,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
 import {colors,spacing,fonts,type} from '../../constants/theme';
-import {BOOKS,FRIENDS,PAGE_COUNTS,CHALLENGES} from '../../data/books';
-import {useStore} from '../../store';
+import {BOOKS,FRIENDS,PAGE_COUNTS,BOOK_VIBES,FRIEND_BOOK} from '../../data/books';
+import {useStore,MOODS,PACES} from '../../store';
 import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
 import SwipeModal from '../../components/SwipeModal';
-import BookClubModal from '../../components/BookClubModal';
 import AddBookModal from '../../components/AddBookModal';
-import ChallengeModal from '../../components/ChallengeModal';
 
-const MOODS=['emotional','dark','reflective','tense','sad','mysterious','funny','inspiring'];
+const SUBS=['For You','Mood','Zeitgeist','Matches'] as const;
+type Sub=typeof SUBS[number];
 
-export default function HomeScreen(){
+export default function DiscoverScreen(){
   const {shelf,journal,customBooks}=useStore();
   const allBooks=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
-  const [mood,setMood]=useState<string|null>(null);
+  const [sub,setSub]=useState<Sub>('For You');
+  const [q,setQ]=useState('');
   const [detailId,setDetailId]=useState<string|null>(null);
   const [showSwipe,setShowSwipe]=useState(false);
-  const [showClub,setShowClub]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
-  const [challengeId,setChallengeId]=useState<string|null>(null);
+  const [moods,setMoods]=useState<string[]>([]);
+  const [pace,setPace]=useState<string|null>(null);
+  const [zTab,setZTab]=useState<'trending'|'new'>('trending');
 
   const reading=allBooks.filter(b=>shelf[b.id]==='reading');
-  const moodBooks=mood?allBooks.filter(b=>b.genres.some(g=>g.toLowerCase().includes('fiction'))).slice(0,5):BOOKS.slice(0,5);
+  const searching=q.trim().length>0;
+  const results=allBooks.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase()));
 
-  return (
-    <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:4,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
-          <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Verso</Text>
-          <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:12,paddingVertical:6,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border}}>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text}}>+ Add Book</Text>
-          </TouchableOpacity>
-        </View>
+  function toggleMood(m:string){ setMoods(p=>p.includes(m)?p.filter(x=>x!==m):p.length>=3?p:[...p,m]); }
 
-        {/* Currently Reading */}
-        {reading.length>0&&<View style={{marginTop:spacing.lg,borderTopWidth:1,borderTopColor:colors.border,borderBottomWidth:1,borderBottomColor:colors.border}}>
-          <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8}}>
-            <Text style={type.label}>Currently Reading</Text>
-          </View>
-          {reading.map(b=>{
-            const j=journal[b.id];
-            const total=PAGE_COUNTS[b.id]||b.pages||300;
-            const pct=j?Math.min(100,Math.round(j.page/total*100)):0;
-            return <TouchableOpacity key={b.id} onPress={()=>setDetailId(b.id)}
-              style={{flexDirection:'row',padding:spacing.lg,gap:12,paddingTop:0}} activeOpacity={0.8}>
+  // Mood filter results
+  const moodMatches=allBooks.filter(b=>{const v=BOOK_VIBES[b.id];if(!v)return false;
+    const moodOk=moods.length===0||moods.some(m=>v.moods.includes(m));
+    const paceOk=!pace||v.pace===pace;
+    return moodOk&&paceOk;}).filter(b=>moods.length>0||pace);
+
+  // Zeitgeist
+  const trending=[...allBooks].filter(b=>BOOK_VIBES[b.id]).sort((a,b)=>BOOK_VIBES[b.id].weekly-BOOK_VIBES[a.id].weekly);
+  const newReleases=[...allBooks].filter(b=>b.year>0).sort((a,b)=>b.year-a.year);
+
+  // Taste match feed: friends with 70%+ match, books they rated >=5 (then >=4)
+  const twins=FRIENDS.filter(f=>f.match>=70);
+  const feed:{bookId:string;friend:typeof FRIENDS[number];r:number}[]=[];
+  allBooks.forEach(b=>{const ft=FRIEND_BOOK[b.id];if(!ft)return;
+    twins.forEach(f=>{const e=ft[f.id];if(e&&e.r>=4&&!shelf[b.id]) feed.push({bookId:b.id,friend:f,r:e.r});});});
+  feed.sort((a,b)=>(b.r-a.r)||(b.friend.match-a.friend.match));
+
+  function Row({id,extra}:{id:string;extra?:React.ReactNode}){
+    const b=allBooks.find(x=>x.id===id); if(!b) return null;
+    return <TouchableOpacity onPress={()=>setDetailId(id)} activeOpacity={0.8} style={{flexDirection:'row',gap:12,padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+      <BookCover bookId={id} size="sm"/>
+      <View style={{flex:1,justifyContent:'center'}}>
+        <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text}} numberOfLines={1}>{b.title}</Text>
+        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>{b.author}{b.year?` · ${b.year}`:''}</Text>
+        {extra}
+      </View>
+      <Text style={{color:colors.text3,fontSize:16,alignSelf:'center'}}>›</Text>
+    </TouchableOpacity>;
+  }
+
+  return <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
+    <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
+    {/* Header */}
+    <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
+      <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Verso</Text>
+      <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:12,paddingVertical:6,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text}}>+ Add Book</Text>
+      </TouchableOpacity>
+    </View>
+    {/* Search */}
+    <View style={{paddingHorizontal:spacing.lg,paddingBottom:10}}>
+      <TextInput style={{fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:14,paddingHorizontal:14,paddingVertical:10}}
+        placeholder="Search title, author, ISBN…" placeholderTextColor={colors.text3} value={q} onChangeText={setQ} autoCapitalize="none" autoCorrect={false}/>
+    </View>
+    {/* Pill sub-nav */}
+    {!searching&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,borderBottomWidth:1,borderBottomColor:colors.border}} contentContainerStyle={{paddingHorizontal:spacing.lg}}>
+      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:14,paddingVertical:12,borderBottomWidth:2,borderBottomColor:sub===s?colors.accent:'transparent'}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.accent:colors.text3,letterSpacing:0.4}}>{s}</Text>
+      </TouchableOpacity>)}
+    </ScrollView>}
+
+    <ScrollView showsVerticalScrollIndicator={false}>
+      {/* SEARCH RESULTS override */}
+      {searching?<View>
+        <Text style={[type.label,{padding:spacing.lg,paddingBottom:8}]}>{results.length} result{results.length!==1?'s':''}</Text>
+        {results.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>★ {b.avgRating||'—'}{BOOK_VIBES[b.id]?` · ${BOOK_VIBES[b.id].pace}`:''}</Text>}/>)}
+        {results.length===0&&<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>No matches. Either we don't have it yet, or you invented a book.</Text>}
+      </View>:<>
+
+      {/* FOR YOU */}
+      {sub==='For You'&&<View>
+        {reading.length>0&&<View style={{borderBottomWidth:1,borderBottomColor:colors.border,paddingBottom:6}}>
+          <Text style={[type.label,{padding:spacing.lg,paddingBottom:8}]}>Currently Reading</Text>
+          {reading.map(b=>{const j=journal[b.id];const total=PAGE_COUNTS[b.id]||b.pages||300;const pct=j?Math.min(100,Math.round(j.page/total*100)):0;
+            return <TouchableOpacity key={b.id} onPress={()=>setDetailId(b.id)} style={{flexDirection:'row',padding:spacing.lg,paddingTop:0,gap:12}} activeOpacity={0.8}>
               <BookCover bookId={b.id} size="sm"/>
               <View style={{flex:1,justifyContent:'center'}}>
                 <Text style={{fontFamily:fonts.serifBold,fontSize:16,color:colors.text,marginBottom:3}}>{b.title}</Text>
                 <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginBottom:6}}>{b.author}</Text>
-                <View style={{height:2,backgroundColor:colors.surface2,overflow:'hidden'}}>
-                  <View style={{height:2,backgroundColor:colors.accent,width:`${pct}%` as any}}/>
-                </View>
+                <View style={{height:2,backgroundColor:colors.surface2}}><View style={{height:2,backgroundColor:colors.accent,width:`${pct}%` as any}}/></View>
                 <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:3}}>{j?`p.${j.page}`:'not started'} · {pct}%</Text>
               </View>
-            </TouchableOpacity>;
-          })}
+            </TouchableOpacity>;})}
         </View>}
-
-        {/* Friends activity */}
-        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:4}}>
-          <Text style={type.label}>Right Now</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
-          {FRIENDS.map(f=><View key={f.id} style={{alignItems:'center',marginRight:18,paddingVertical:6}}>
-            <View style={{width:44,height:44,borderRadius:22,backgroundColor:f.color+'28',alignItems:'center',justifyContent:'center',marginBottom:5}}>
-              <Text style={{fontFamily:fonts.sansBold,fontSize:16,color:f.color}}>{f.init}</Text>
-            </View>
-            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{f.name.split(' ')[0]}</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:9,color:colors.text3,marginTop:1}}>{f.status}</Text>
-          </View>)}
-        </ScrollView>
-
-        {/* Rate books card */}
-        <TouchableOpacity style={card} activeOpacity={0.8} onPress={()=>setShowSwipe(true)}>
+        <TouchableOpacity style={card} activeOpacity={0.85} onPress={()=>setShowSwipe(true)}>
           <View style={{flex:1}}>
             <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text,marginBottom:3}}>{allBooks.filter(b=>!shelf[b.id]).length} books awaiting your verdict</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Swipe to rate · build your ELO rankings</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Book Tinder · build your taste profile</Text>
           </View>
           <Text style={{fontSize:18,color:colors.accent}}>→</Text>
         </TouchableOpacity>
-
-        {/* Book Clubs card */}
-        <TouchableOpacity style={[card,{marginTop:0}]} activeOpacity={0.8} onPress={()=>setShowClub(true)}>
-          <View style={{flex:1}}>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text,marginBottom:3}}>Book Clubs</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>The Lit Salon · Dark & Dense</Text>
-          </View>
-          <Text style={{fontSize:18,color:colors.accent}}>→</Text>
-        </TouchableOpacity>
-
-        {/* Reading Challenges */}
-        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8}}>
-          <Text style={type.label}>Reading Challenges</Text>
-        </View>
+        <Text style={[type.label,{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8}]}>Picked by Editors</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
-          {CHALLENGES.map(ch=>{const pct=Math.round(ch.done.length/ch.goal*100);return <TouchableOpacity key={ch.id} onPress={()=>setChallengeId(ch.id)} activeOpacity={0.85}
-            style={{width:230,marginRight:14,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:ch.featured?colors.accent:colors.border}}>
-            {ch.featured&&<Text style={{fontFamily:fonts.sansBold,fontSize:8,color:colors.accent,letterSpacing:1.6,textTransform:'uppercase',marginBottom:6}}>Featured</Text>}
-            <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,lineHeight:20,marginBottom:8}} numberOfLines={2}>{ch.title}</Text>
-            <View style={{height:3,backgroundColor:colors.surface2,marginBottom:6}}><View style={{width:`${pct}%`,height:3,backgroundColor:colors.accent}}/></View>
-            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{ch.done.length}/{ch.goal} · {ch.readers.toLocaleString()} readers</Text>
-          </TouchableOpacity>;})}
-        </ScrollView>
-
-        {/* Mood */}
-        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
-          <Text style={type.label}>Tonight's Mood</Text>
-          {mood&&<TouchableOpacity onPress={()=>setMood(null)}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent}}>Clear ✕</Text></TouchableOpacity>}
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
-          {MOODS.map(m=><TouchableOpacity key={m} onPress={()=>setMood(mood===m?null:m)} style={[chip,mood===m&&{backgroundColor:colors.accentDim,borderColor:colors.accent}]}>
-            <Text style={{fontFamily:fonts.sans,fontSize:12,color:mood===m?colors.accent:colors.text3}}>{m}</Text>
-          </TouchableOpacity>)}
-        </ScrollView>
-
-        {/* Editor picks */}
-        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8}}>
-          <Text style={type.label}>{mood?`Picked for "${mood}"`:'Picked by Editors'}</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
-          {moodBooks.map(b=><TouchableOpacity key={b.id} style={{width:110,marginRight:14}} activeOpacity={0.8} onPress={()=>setDetailId(b.id)}>
+          {BOOKS.slice(0,6).map(b=><TouchableOpacity key={b.id} style={{width:110,marginRight:14}} activeOpacity={0.8} onPress={()=>setDetailId(b.id)}>
             <BookCover bookId={b.id} size="md"/>
             <Text style={{fontFamily:fonts.serifItalic,fontSize:13,color:colors.text,marginTop:7,marginBottom:2}} numberOfLines={2}>{b.title}</Text>
             <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{b.author}</Text>
           </TouchableOpacity>)}
         </ScrollView>
+        <View style={{height:24}}/>
+      </View>}
 
-        <View style={{height:32}}/>
-      </ScrollView>
+      {/* MOOD */}
+      {sub==='Mood'&&<View style={{padding:spacing.lg}}>
+        <Text style={[type.label,{marginBottom:4}]}>Tonight's Mood</Text>
+        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginBottom:12}}>Pick up to 3.</Text>
+        <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:spacing.lg}}>
+          {MOODS.map(m=><TouchableOpacity key={m} onPress={()=>toggleMood(m)} style={[chip,moods.includes(m)&&activeChip]}>
+            <Text style={{fontFamily:fonts.sans,fontSize:12,color:moods.includes(m)?colors.accent:colors.text3}}>{m}</Text>
+          </TouchableOpacity>)}
+        </View>
+        <Text style={[type.label,{marginBottom:12}]}>How fast do you want to move?</Text>
+        <View style={{flexDirection:'row',gap:8,marginBottom:spacing.lg}}>
+          {PACES.map(p=><TouchableOpacity key={p} onPress={()=>setPace(pace===p?null:p)} style={[chip,pace===p&&activeChip]}>
+            <Text style={{fontFamily:fonts.sans,fontSize:12,color:pace===p?colors.accent:colors.text3}}>{p}</Text>
+          </TouchableOpacity>)}
+        </View>
+        {(moods.length>0||pace)?<View style={{marginHorizontal:-spacing.lg}}>
+          <Text style={[type.label,{paddingHorizontal:spacing.lg,marginBottom:4}]}>{moodMatches.length} books match</Text>
+          {moodMatches.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>{BOOK_VIBES[b.id].moods.join(' · ')} · {BOOK_VIBES[b.id].pace}</Text>}/>)}
+        </View>:<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.xl}}>Tell us how you want to feel tonight.</Text>}
+      </View>}
 
-      <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
-      {showSwipe&&<SwipeModal visible onClose={()=>setShowSwipe(false)} onOpenBook={id=>{setShowSwipe(false);setDetailId(id);}}/>}
-      {showClub&&<BookClubModal visible onClose={()=>setShowClub(false)} onOpenBook={id=>{setShowClub(false);setDetailId(id);}}/>}
-      {showAdd&&<AddBookModal visible onClose={()=>setShowAdd(false)}/>}
-      <ChallengeModal challengeId={challengeId} onClose={()=>setChallengeId(null)} onOpenBook={id=>{setChallengeId(null);setDetailId(id);}}/>
-    </SafeAreaView>
-  );
+      {/* ZEITGEIST */}
+      {sub==='Zeitgeist'&&<View>
+        <View style={{flexDirection:'row',gap:8,padding:spacing.lg,paddingBottom:8}}>
+          {([['trending','Trending this week'],['new','New releases']] as const).map(([k,l])=><TouchableOpacity key={k} onPress={()=>setZTab(k)}
+            style={{paddingHorizontal:12,paddingVertical:7,backgroundColor:zTab===k?colors.accentDim:colors.surface,borderWidth:1,borderColor:zTab===k?colors.accent:colors.border}}>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:zTab===k?colors.accent:colors.text3}}>{l}</Text>
+          </TouchableOpacity>)}
+        </View>
+        {(zTab==='trending'?trending:newReleases).map((b,i)=><TouchableOpacity key={b.id} onPress={()=>setDetailId(b.id)} activeOpacity={0.8}
+          style={{flexDirection:'row',gap:12,paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border,alignItems:'center'}}>
+          <Text style={{fontFamily:fonts.serifBold,fontSize:18,color:colors.text3,width:26}}>{i+1}</Text>
+          <View style={{flex:1}}>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:16,color:colors.text}} numberOfLines={1}>{b.title}</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>{b.author}</Text>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent,marginTop:4}}>{zTab==='trending'?`${BOOK_VIBES[b.id]?.weekly.toLocaleString()||'—'} readers this week`:b.year}</Text>
+          </View>
+        </TouchableOpacity>)}
+        <View style={{height:24}}/>
+      </View>}
+
+      {/* MATCHES — taste match feed */}
+      {sub==='Matches'&&<View>
+        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,padding:spacing.lg,paddingBottom:8}}>Books your taste-twins loved</Text>
+        {feed.map(({bookId,friend,r},i)=>{const b=allBooks.find(x=>x.id===bookId);if(!b)return null;
+          return <TouchableOpacity key={bookId+friend.id+i} onPress={()=>setDetailId(bookId)} activeOpacity={0.8}
+            style={{flexDirection:'row',gap:12,padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+            <BookCover bookId={bookId} size="sm"/>
+            <View style={{flex:1,justifyContent:'center'}}>
+              <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text}} numberOfLines={1}>{b.title}</Text>
+              <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>{b.author}</Text>
+              <View style={{flexDirection:'row',alignItems:'center',gap:6,marginTop:5}}>
+                <View style={{width:20,height:20,borderRadius:10,backgroundColor:friend.color+'24',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:9,color:friend.color}}>{friend.init}</Text></View>
+                <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>{friend.name.split(' ')[0]} ({friend.match}% match) gave this {'★'.repeat(r)}</Text>
+              </View>
+            </View>
+          </TouchableOpacity>;})}
+        {feed.length===0&&<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>Your taste-twins have run out of recommendations. Suspicious.</Text>}
+        <View style={{height:24}}/>
+      </View>}
+      </>}
+    </ScrollView>
+
+    <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
+    {showSwipe&&<SwipeModal visible onClose={()=>setShowSwipe(false)} onOpenBook={id=>{setShowSwipe(false);setDetailId(id);}}/>}
+    {showAdd&&<AddBookModal visible onClose={()=>setShowAdd(false)}/>}
+  </SafeAreaView>;
 }
 const card:any={marginHorizontal:spacing.lg,marginTop:spacing.md,marginBottom:spacing.sm,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,flexDirection:'row',alignItems:'center'};
-const chip:any={paddingHorizontal:14,paddingVertical:7,marginRight:8,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border};
+const chip:any={paddingHorizontal:14,paddingVertical:7,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border};
+const activeChip:any={backgroundColor:colors.accentDim,borderColor:colors.accent};

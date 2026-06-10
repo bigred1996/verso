@@ -8,15 +8,15 @@ import BookCover from './BookCover';
 interface Club {
   id:string; name:string; bookId:string; members:string[];
   progress:Record<string,number>; goal:number;
-  chat:{user:string;text:string;ts:string}[];
+  chat:{user:string;text:string;ts:string;page?:number}[];
 }
 const DEFAULT_CLUBS:Club[]=[
   {id:'lit-salon',name:'The Lit Salon',bookId:'intermezzo',members:['Elif','Juno'],
    progress:{You:67,Elif:103,Juno:45},goal:384,
-   chat:[{user:'Elif',text:'Chapter 3 destroyed me.',ts:'Jun 7'},{user:'Juno',text:'The chess subplot is so good!',ts:'Jun 8'},{user:'You',text:'Finally caught up. Peter is a disaster but I love him.',ts:'Jun 8'}]},
+   chat:[{user:'Elif',text:'Chapter 3 destroyed me.',ts:'Jun 7',page:40},{user:'Juno',text:'The chess subplot is so good!',ts:'Jun 8',page:55},{user:'You',text:'Finally caught up. Peter is a disaster but I love him.',ts:'Jun 8',page:60},{user:'Elif',text:'Wait until the ending. I can\'t say more.',ts:'Jun 9',page:300}]},
   {id:'dark-reads',name:'Dark & Dense',bookId:'a-little-life',members:['Marcus','Priya'],
    progress:{You:0,Marcus:210,Priya:88},goal:720,
-   chat:[{user:'Priya',text:'I warned everyone this would be painful.',ts:'Jun 5'},{user:'Marcus',text:'Three chapters in and I already need therapy.',ts:'Jun 6'}]},
+   chat:[{user:'Priya',text:'I warned everyone this would be painful.',ts:'Jun 5',page:1},{user:'Marcus',text:'Three chapters in and I already need therapy.',ts:'Jun 6',page:60},{user:'Marcus',text:'The midpoint reveal. I have to lie down.',ts:'Jun 7',page:380}]},
 ];
 
 interface Props { visible:boolean; onClose:()=>void; onOpenBook:(id:string)=>void; }
@@ -32,7 +32,8 @@ export default function BookClubModal({visible,onClose,onOpenBook}:Props){
   const book=club?allBooks.find(b=>b.id===club.bookId):null;
 
   // Merge static chat with store messages
-  const chat=club?[...club.chat,...(clubMessages[club.id]||[])]:[];
+  const chat:{user:string;text:string;ts:string;page?:number}[]=club?[...club.chat,...(clubMessages[club.id]||[])]:[];
+  const myPage=club?club.progress.You||0:0;
 
   function send(){
     if(!msg.trim()||!activeClub) return;
@@ -92,20 +93,27 @@ export default function BookClubModal({visible,onClose,onOpenBook}:Props){
           style={{flexDirection:'row',padding:spacing.lg,gap:10,borderBottomWidth:1,borderBottomColor:colors.border,alignItems:'center'}}>
           <BookCover bookId={book.id} size="sm"/>
           <View style={{flex:1}}>
-            <Text style={{fontSize:13,color:colors.text,fontWeight:'600'}}>{book.title}</Text>
-            <Text style={{fontSize:11,color:colors.text3}}>Currently reading · tap to open →</Text>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:14,color:colors.text}}>{book.title}</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>You're on p.{myPage} · posts unlock as you read</Text>
           </View>
         </TouchableOpacity>
-        {/* Chat */}
+        {/* Chat — progress-gated */}
         <ScrollView ref={scrollRef} style={{flex:1}} contentContainerStyle={{padding:spacing.lg,gap:10}}>
           {chat.map((m,i)=>{
             const isYou=m.user==='You';
-            return <View key={i} style={{alignItems:isYou?'flex-end':'flex-start',marginBottom:8}}>
-              {!isYou&&<Text style={{fontSize:10,color:colors.text3,marginBottom:3}}>{m.user} · {m.ts}</Text>}
-              <View style={{maxWidth:'78%',padding:10,backgroundColor:isYou?colors.accentDim:colors.surface,borderWidth:1,borderColor:isYou?colors.accent:colors.border}}>
-                <Text style={{fontSize:13,color:colors.text,lineHeight:18}}>{m.text}</Text>
+            const locked=!isYou&&typeof m.page==='number'&&m.page>myPage;
+            if(locked) return <View key={i} style={{alignItems:'flex-start',marginBottom:8}}>
+              <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginBottom:3}}>{m.user} · {m.ts}</Text>
+              <View style={{maxWidth:'78%',padding:10,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderStyle:'dashed'}}>
+                <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3}}>Hidden until p.{m.page} — no spoilers.</Text>
               </View>
-              {isYou&&<Text style={{fontSize:10,color:colors.text3,marginTop:3}}>{m.ts}</Text>}
+            </View>;
+            return <View key={i} style={{alignItems:isYou?'flex-end':'flex-start',marginBottom:8}}>
+              {!isYou&&<Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginBottom:3}}>{m.user} · {m.ts}</Text>}
+              <View style={{maxWidth:'78%',padding:10,backgroundColor:isYou?colors.accentDim:colors.surface,borderWidth:1,borderColor:isYou?colors.accent:colors.border}}>
+                <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text,lineHeight:18}}>{m.text}</Text>
+              </View>
+              {isYou&&<Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:3}}>{m.ts}</Text>}
             </View>;
           })}
           <View style={{height:20}}/>

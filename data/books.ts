@@ -109,6 +109,37 @@ export const CHALLENGES:Challenge[] = [
     done:['a-little-life']},
 ];
 
+// ── Community mood/pace consensus, weekly activity (trending), reader "vibes" ──
+export interface BookVibe { moods:string[]; pace:string; weekly:number; vibes:string[]; }
+export const BOOK_VIBES:Record<string,BookVibe> = {
+  'normal-people':{moods:['emotional','reflective','sad'],pace:'measured',weekly:847,vibes:['devastating','read in one sitting','quietly brutal']},
+  'intermezzo':{moods:['emotional','reflective','hopeful'],pace:'slow burn',weekly:1240,vibes:['tender','grief-soaked','cathartic']},
+  'stoner':{moods:['reflective','sad','emotional'],pace:'slow burn',weekly:412,vibes:['quiet','devastating','perfect']},
+  'a-little-life':{moods:['dark','emotional','sad'],pace:'measured',weekly:932,vibes:['harrowing','a commitment','cried for days']},
+  'remains-of-the-day':{moods:['reflective','sad','emotional'],pace:'slow burn',weekly:388,vibes:['repressed','aching','restrained']},
+  'the-road':{moods:['dark','tense','sad'],pace:'propulsive',weekly:602,vibes:['bleak','unforgettable','spare']},
+  'pachinko':{moods:['emotional','reflective','hopeful'],pace:'measured',weekly:721,vibes:['sweeping','generational','immersive']},
+  'my-year-of-rest':{moods:['dark','funny','reflective'],pace:'measured',weekly:556,vibes:['deadpan','unhinged','strangely cozy']},
+  'demon-copperhead':{moods:['emotional','dark','hopeful'],pace:'propulsive',weekly:489,vibes:['furious','tender','unputdownable']},
+  'james':{moods:['tense','reflective','adventurous'],pace:'propulsive',weekly:903,vibes:['urgent','brilliant','necessary']},
+  'white-noise':{moods:['funny','reflective','tense'],pace:'measured',weekly:201,vibes:['prophetic','wry','uneasy']},
+  'the-sympathizer':{moods:['tense','dark','reflective'],pace:'measured',weekly:178,vibes:['cerebral','biting','layered']},
+  'conversations-with-friends':{moods:['emotional','reflective'],pace:'measured',weekly:340,vibes:['cool','aching','sharp']},
+};
+
+// ── Friends activity feed (most recent first) ──
+export interface ActivityItem { id:string; user:string; type:'reading'|'rated'|'hot'|'dnf'|'milestone'; bookId?:string; rating?:number; text?:string; ts:string; }
+export const ACTIVITY:ActivityItem[] = [
+  {id:'a1',user:'elif',type:'hot',bookId:'intermezzo',text:'Chapter 3 destroyed me. I am not okay and I refuse to recover.',ts:'2h'},
+  {id:'a2',user:'juno',type:'rated',bookId:'a-little-life',rating:5,ts:'5h'},
+  {id:'a3',user:'marcus',type:'reading',bookId:'the-road',text:'p.142',ts:'8h'},
+  {id:'a4',user:'priya',type:'milestone',text:'hit a 40-day reading streak',ts:'1d'},
+  {id:'a5',user:'juno',type:'dnf',bookId:'white-noise',text:'Wrong time. I\'ll come back to it. Maybe.',ts:'1d'},
+  {id:'a6',user:'elif',type:'rated',bookId:'normal-people',rating:5,ts:'2d'},
+  {id:'a7',user:'marcus',type:'hot',bookId:'stoner',text:'The secret great American novel. Fight me in the comments.',ts:'2d'},
+  {id:'a8',user:'priya',type:'reading',bookId:'pachinko',text:'p.301',ts:'3d'},
+];
+
 // ── Friends' ratings + one-line takes per book ──
 export const FRIEND_BOOK:Record<string,Record<string,{r:number;t:string}>> = {
   'normal-people':{elif:{r:5,t:'She does in 273 pages what most can\'t in 800.'},juno:{r:4,t:'Marianne deserved better. Discuss.'}},

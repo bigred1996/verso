@@ -2,9 +2,9 @@ import React,{useState,useEffect} from 'react';
 import {Modal,View,Text,ScrollView,TouchableOpacity,TextInput,SafeAreaView,StatusBar,Platform,Share} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {colors,spacing,fonts,type} from '../constants/theme';
-import {BOOKS,PAGE_COUNTS,AUTHOR_DATA,BOOK_TAGS,FRIEND_BOOK,FRIENDS} from '../data/books';
+import {BOOKS,PAGE_COUNTS,AUTHOR_DATA,BOOK_TAGS,FRIEND_BOOK,FRIENDS,BOOK_VIBES} from '../data/books';
 import type {ShelfStatus,Format} from '../data/books';
-import {useStore} from '../store';
+import {useStore,MOODS,PACES,DNF_REASONS} from '../store';
 import BookCover from './BookCover';
 import AuthorModal from './AuthorModal';
 
@@ -22,7 +22,7 @@ const HOT_PLACEHOLDERS=[
 interface Props { bookId:string|null; onClose:()=>void; }
 
 export default function BookDetailModal({bookId,onClose}:Props){
-  const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead}=useStore();
+  const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,favorites,dnfReasons,bookMoods,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead,toggleFavorite,setDnfReason,setBookMoods}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
 
   // Internal active id so tapping a book inside the author sheet navigates here
@@ -47,11 +47,17 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const [revSaved,setRevSaved]=useState(false);
   const [authorOpen,setAuthorOpen]=useState<string|null>(null);
   const [buddyPicking,setBuddyPicking]=useState(false);
+  const [feelMoods,setFeelMoods]=useState<string[]>([]);
+  const [feelPace,setFeelPace]=useState<string|null>(null);
+  const [dnfPage,setDnfPage]=useState('');
 
-  // hydrate review fields when the active book changes
+  // hydrate review + felt-moods when the active book changes
   useEffect(()=>{
     const r=activeId?reviews[activeId]:null;
     setHot(r?.hotTake||''); setOverall(r?.overall||''); setBest(r?.best||''); setForWhom(r?.forWhom||'');
+    const bm=activeId?bookMoods[activeId]:null;
+    setFeelMoods(bm?.moods||[]); setFeelPace(bm?.pace||null);
+    setDnfPage('');
   },[activeId]);
 
   if(!book||!activeId) return null;
@@ -68,7 +74,13 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const friendTakes=FRIEND_BOOK[bid]||{};
   const friendIds=Object.keys(friendTakes);
   const buddy=buddyReads.find(b=>b.bookId===bid);
+  const vibe=BOOK_VIBES[bid];
+  const isFav=favorites.includes(bid);
+  const dnfInfo=dnfReasons[bid];
   const total=PAGE_COUNTS[bid]||book.pages||280;
+  const paceIdx=vibe?PACES.indexOf(vibe.pace):-1;
+  function toggleFeel(m:string){ setFeelMoods(p=>p.includes(m)?p.filter(x=>x!==m):p.length>=3?p:[...p,m]); }
+  function saveFeel(){ setBookMoods(bid,feelMoods,feelPace||''); }
   const pct=j?Math.min(100,Math.round(j.page/total*100)):0;
   const hasAuthorPage=!!AUTHOR_DATA[book.author]||all.filter(b=>b.author===book.author).length>1;
   const TODAY_LABEL=()=>{const d=new Date(2026,5,9);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();};
@@ -150,12 +162,37 @@ export default function BookDetailModal({bookId,onClose}:Props){
               {book.genres.map(g=><View key={g} style={pill}><Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{g}</Text></View>)}
             </View>
             {book.readers>0&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>★ {book.avgRating} · {book.readers.toLocaleString()} readers</Text>}
+            <TouchableOpacity onPress={()=>toggleFavorite(bid)} style={{marginTop:8,flexDirection:'row',alignItems:'center',gap:5}}>
+              <Text style={{fontSize:14,color:isFav?colors.accent:colors.text3}}>{isFav?'♥':'♡'}</Text>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:isFav?colors.accent:colors.text3}}>{isFav?'Favourite':'Add to Favourites'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         {book.synopsis?<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
           <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2,lineHeight:20}}>{book.synopsis}</Text>
         </View>:null}
+
+        {/* Community vibes */}
+        {vibe&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={[type.label,{marginBottom:10}]}>The Vibe</Text>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:14}}>
+            {vibe.moods.map((m,i)=><View key={m} style={{paddingHorizontal:10,paddingVertical:4,backgroundColor:i<3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:i<3?'rgba(61,107,72,0.4)':colors.border}}>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:i<3?colors.accent:colors.text3}}>{m}</Text>
+            </View>)}
+          </View>
+          {/* Pace bar with marker */}
+          <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:5}}>
+            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>slow burn</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>propulsive</Text>
+          </View>
+          <View style={{height:3,backgroundColor:colors.surface2,justifyContent:'center'}}>
+            <View style={{position:'absolute',left:`${paceIdx===0?8:paceIdx===1?50:92}%`,width:12,height:12,borderRadius:6,backgroundColor:colors.accent,marginLeft:-6}}/>
+          </View>
+          {vibe.vibes.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginTop:16}}>
+            {vibe.vibes.map(v=><Text key={v} style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text2}}>"{v}"  </Text>)}
+          </View>}
+        </View>}
 
         {/* Shelf */}
         <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
@@ -171,7 +208,37 @@ export default function BookDetailModal({bookId,onClose}:Props){
           <Text style={[type.label,{marginBottom:10}]}>Your Rating{rat?` · ${rat} ★`:''}</Text>
           <View style={{flexDirection:'row'}}>{[1,2,3,4,5].map(s=><Star key={s} n={s} value={rat||0} onPress={v=>setRating(bid,v)}/>)}</View>
           <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:4}}>tap a star twice for half</Text>
+
+          {/* How did it feel? — adds to the community tally */}
+          {!!rat&&<View style={{marginTop:spacing.lg,paddingTop:spacing.lg,borderTopWidth:1,borderTopColor:colors.border}}>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3}}>How did it feel?</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginBottom:10}}>Pick up to 3 moods + a pace. Your input shapes the community vibe.</Text>
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10}}>
+              {MOODS.map(m=><TouchableOpacity key={m} onPress={()=>toggleFeel(m)} style={[chip,feelMoods.includes(m)&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
+                <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelMoods.includes(m)?colors.accent:colors.text3}}>{m}</Text>
+              </TouchableOpacity>)}
+            </View>
+            <View style={{flexDirection:'row',gap:6,marginBottom:12}}>
+              {PACES.map(p=><TouchableOpacity key={p} onPress={()=>setFeelPace(feelPace===p?null:p)} style={[chip,feelPace===p&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
+                <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelPace===p?colors.accent:colors.text3}}>{p}</Text>
+              </TouchableOpacity>)}
+            </View>
+            <TouchableOpacity style={btn} onPress={saveFeel}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.bg}}>Add to the tally</Text></TouchableOpacity>
+            {bookMoods[bid]&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent,marginTop:8,textAlign:'center'}}>Logged: {bookMoods[bid].moods.join(', ')||'—'}{bookMoods[bid].pace?` · ${bookMoods[bid].pace}`:''}</Text>}
+          </View>}
         </View>
+
+        {/* DNF reason */}
+        {sh==='dnf'&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={[type.label,{marginBottom:10}]}>Why did you stop?</Text>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10}}>
+            {DNF_REASONS.map(r=><TouchableOpacity key={r} onPress={()=>setDnfReason(bid,r,parseInt(dnfPage)||dnfInfo?.page||0)} style={[chip,dnfInfo?.reason===r&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:dnfInfo?.reason===r?colors.accent:colors.text3}}>{r}</Text>
+            </TouchableOpacity>)}
+          </View>
+          <TextInput style={inp} placeholder="Page you stopped on" placeholderTextColor={colors.text3} keyboardType="numeric"
+            value={dnfPage||(dnfInfo?String(dnfInfo.page):'')} onChangeText={t=>{setDnfPage(t);if(dnfInfo)setDnfReason(bid,dnfInfo.reason,parseInt(t)||0);}}/>
+        </View>}
 
         {/* Format */}
         {(sh==='reading'||sh==='read'||sh==='dnf')&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
