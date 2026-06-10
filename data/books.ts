@@ -73,3 +73,54 @@ export const FRIENDS:Friend[] = [
   {id:'juno',  name:'Juno Park',   match:84,bookId:'a-little-life', status:'wants',   init:'J',color:'#A67B9E'},
   {id:'priya', name:'Priya Acharya',match:72,bookId:'pachinko',     status:'reading', init:'P',color:'#7BA695'},
 ];
+
+// ── Curated book metadata (subgenres, tropes, themes, perspective, setting, content warnings) ──
+export interface BookTags { subgenres:string[]; tropes:string[]; themes:string[]; perspective:string; setting:string; cw:string[]; }
+export const BOOK_TAGS:Record<string,BookTags> = {
+  'normal-people':{subgenres:['Contemporary Romance','Coming of Age','Irish Lit'],tropes:['Will They Won\'t They','Class Divide','Childhood Friends','On Again Off Again'],themes:['Identity','Class','Love','Communication'],perspective:'Third Person Limited',setting:'Contemporary Ireland',cw:['Sexual content','Mental health']},
+  'the-road':{subgenres:['Post-Apocalyptic','Survival','Literary Horror'],tropes:['Father & Son','End of the World','The Last Good Men','Road Trip'],themes:['Survival','Parenthood','Hope','Morality'],perspective:'Third Person Limited',setting:'Post-apocalyptic America',cw:['Extreme violence','Death','Child in peril']},
+  'pachinko':{subgenres:['Family Saga','Historical Fiction','Immigration Lit'],tropes:['Multi-Generational','Forbidden Love','Found Family','Sacrifice for Children'],themes:['Identity','Sacrifice','Discrimination','Legacy'],perspective:'Third Person Omniscient',setting:'Korea & Japan, 1910s–1980s',cw:['Racism','Sexual assault','Death']},
+  'my-year-of-rest':{subgenres:['Dark Comedy','Psychological Fiction','Autofiction'],tropes:['Unreliable Narrator','Rich & Miserable','Voluntary Isolation','Deadpan Humour'],themes:['Depression','Privilege','Numbness','Grief'],perspective:'First Person',setting:'New York City, early 2000s',cw:['Drug use','Mental health','Eating disorder']},
+  'stoner':{subgenres:['Academic Fiction','Character Study','Quiet Realism'],tropes:['Quiet Tragic Hero','Academic Setting','Failed Marriage','Late Love'],themes:['Regret','Purpose','Endurance','Love'],perspective:'Third Person Limited',setting:'Missouri, early 20th century',cw:[]},
+  'white-noise':{subgenres:['Postmodern Satire','Academic Comedy','Domestic Fiction'],tropes:['Death Anxiety','Suburban Nightmare','Media Saturation','Conspiracy'],themes:['Death','Consumerism','Fear','Modern Life'],perspective:'First Person',setting:'Suburban America, 1980s',cw:['Environmental disaster']},
+  'remains-of-the-day':{subgenres:['Historical Fiction','Character Study','Unreliable Memoir'],tropes:['Repressed Feelings','Missed Connection','Loyal to a Fault','Road Trip'],themes:['Regret','Dignity','Duty vs Desire','Class'],perspective:'First Person Unreliable',setting:'Post-war England',cw:[]},
+  'a-little-life':{subgenres:['Trauma Fiction','Friendship Epic','Urban Literary'],tropes:['Found Family','Dark Past Revealed','Lifelong Friendship','Healing Journey'],themes:['Trauma','Friendship','Love','Recovery'],perspective:'Third Person Limited',setting:'New York City, contemporary',cw:['Extreme abuse','Self-harm','Sexual assault','Suicide']},
+  'demon-copperhead':{subgenres:['Social Realism','Coming of Age','Regional Fiction'],tropes:['Orphan Hero','Found Family','System Failure','Against the Odds'],themes:['Addiction','Poverty','Resilience','America'],perspective:'First Person',setting:'Appalachia, 1990s–2000s',cw:['Drug addiction','Child abuse','Death']},
+  'james':{subgenres:['Historical Fiction','Retelling','Satirical Fiction'],tropes:['Unreliable Narrator','Race & Language','Escape','New Lens on a Classic'],themes:['Freedom','Race','Language & Power','Humanity'],perspective:'First Person',setting:'Antebellum South, 1840s',cw:['Racism','Slavery','Violence']},
+  'intermezzo':{subgenres:['Grief Novel','Contemporary Romance','Irish Lit'],tropes:['Age Gap Romance','Brothers','Grief','Internal Monologue'],themes:['Grief','Love','Family','Recovery'],perspective:'Third Person Multiple',setting:'Contemporary Dublin',cw:['Death','Drug use','Sexual content']},
+  'the-sympathizer':{subgenres:['War Fiction','Spy Thriller','Postcolonial Lit'],tropes:['Double Agent','Identity Crisis','War Aftermath','Unreliable Narrator'],themes:['Identity','Loyalty','Colonialism','War'],perspective:'First Person Confessional',setting:'Vietnam War era & Cold War',cw:['Graphic violence','Sexual assault','Torture']},
+  'conversations-with-friends':{subgenres:['Contemporary','Irish Lit','Autofiction'],tropes:['Love Triangle','Affair','Female Friendship','Emotional Detachment'],themes:['Intimacy','Class','Communication','Youth'],perspective:'First Person',setting:'Contemporary Dublin',cw:['Sexual content','Mental health','Self-harm']},
+};
+
+// ── Reading challenges ──
+export interface Challenge { id:string;title:string;desc:string;readers:number;goal:number;featured:boolean;books:string[];done:string[]; }
+export const CHALLENGES:Challenge[] = [
+  {id:'literary-dozen',title:"Verso's Literary Dozen",desc:"12 novels our editors keep pressing into people's hands. No duds. No filler. No excuses. These are the books that changed how we read everything else.",
+    readers:9847,goal:12,featured:true,
+    books:['stoner','normal-people','the-road','pachinko','a-little-life','remains-of-the-day','white-noise','demon-copperhead','james','the-sympathizer','intermezzo','conversations-with-friends'],
+    done:['stoner','normal-people','a-little-life','the-road']},
+  {id:'translated',title:'Lost in Translation (In the Best Way)',desc:"6 books that prove the best stories aren't always written in English. The best literature often emerges from the tension between cultures — and these six know exactly where they live.",
+    readers:4201,goal:6,featured:false,
+    books:['pachinko','the-sympathizer','remains-of-the-day','my-year-of-rest','normal-people','intermezzo'],
+    done:['pachinko','the-sympathizer']},
+  {id:'uncomfortable',title:'Books That Will Make You Miss Your Stop',desc:"12 reads so consuming you'll forget you have places to be. Not comfort reads. Not safe picks. These are the books that ruin your weekend in the best possible way.",
+    readers:2340,goal:12,featured:false,
+    books:['a-little-life','the-road','pachinko','demon-copperhead','the-sympathizer','stoner','my-year-of-rest','normal-people','white-noise','intermezzo','james'],
+    done:['a-little-life']},
+];
+
+// ── Friends' ratings + one-line takes per book ──
+export const FRIEND_BOOK:Record<string,Record<string,{r:number;t:string}>> = {
+  'normal-people':{elif:{r:5,t:'She does in 273 pages what most can\'t in 800.'},juno:{r:4,t:'Marianne deserved better. Discuss.'}},
+  'intermezzo':{elif:{r:5,t:'Chapter 3 destroyed me.'},juno:{r:4,t:'The chess subplot is so good.'}},
+  'stoner':{marcus:{r:5,t:'The secret great American novel.'},elif:{r:5,t:'Quiet and total.'}},
+  'a-little-life':{juno:{r:5,t:'I need to lie down for a year.'},marcus:{r:3,t:'Brutal. Maybe too brutal.'},priya:{r:4,t:'Devastating, deliberately.'}},
+  'the-road':{marcus:{r:5,t:'Bleak kings only.'},priya:{r:4,t:'Carry the fire.'}},
+  'pachinko':{priya:{r:5,t:'A saga you can\'t stop.'},elif:{r:4,t:'History happening to people.'}},
+  'remains-of-the-day':{priya:{r:5,t:'Repression as a literary device. Ishiguro wins.'},elif:{r:4,t:'The ache is the point.'}},
+  'demon-copperhead':{elif:{r:4,t:'Kingsolver earns the Pulitzer.'},priya:{r:4,t:'The kid\'s voice is everything.'}},
+  'james':{priya:{r:4,t:'Required reading.'},marcus:{r:4,t:'Everett at the height of it.'}},
+  'the-sympathizer':{marcus:{r:4,t:'The prose alone is worth it.'}},
+  'my-year-of-rest':{juno:{r:4,t:'I hated her and wanted to be her.'}},
+  'white-noise':{marcus:{r:4,t:'The anxiety was already there. DeLillo named it.'}},
+};

@@ -2,7 +2,7 @@ import React from 'react';
 import {View,Text} from 'react-native';
 import Svg,{Circle,Text as SvgText} from 'react-native-svg';
 import {colors,spacing,fonts,type} from '../constants/theme';
-import {BOOKS,PAGE_COUNTS} from '../data/books';
+import {BOOKS,PAGE_COUNTS,BOOK_TAGS,FRIENDS} from '../data/books';
 import {useStore} from '../store';
 
 const sec={padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border};
@@ -49,6 +49,12 @@ export default function StatsView(){
 
   // 12-week streak grid from streakDays + a seeded base
   const base=[1,1,1,0,1,0,0, 1,1,1,1,0,1,0, 1,0,1,1,1,0,0, 1,1,1,0,1,1,0, 1,0,1,1,1,1,1, 0,1,1,1,0,1,0];
+
+  // Tropes aggregated from books the user has engaged with (shelved/rated)
+  const engaged=all.filter(b=>shelf[b.id]||ratings[b.id]);
+  const tropeCounts:Record<string,number>={};
+  (engaged.length?engaged:all).forEach(b=>{(BOOK_TAGS[b.id]?.tropes||[]).forEach(t=>{tropeCounts[t]=(tropeCounts[t]||0)+1;});});
+  const tropes=Object.entries(tropeCounts).sort((a,b)=>b[1]-a[1]).slice(0,12);
 
   return <View>
     {/* Year at a glance */}
@@ -138,6 +144,27 @@ export default function StatsView(){
         {base.map((v,i)=><View key={i} style={{width:13,height:13,backgroundColor:v?colors.accent:colors.surface2,opacity:v?1:1}}/>)}
       </View>
       <Text style={quote}>"Consistency beats intensity. You've got both."</Text>
+    </View>
+
+    {/* Tropes cloud */}
+    {tropes.length>0&&<View style={sec}>
+      <Text style={[type.label,{marginBottom:14}]}>Your Tropes</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:7}}>
+        {tropes.map(([t,n])=><View key={t} style={{paddingHorizontal:10,paddingVertical:5,backgroundColor:n>=3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:n>=3?'rgba(61,107,72,0.4)':colors.border}}>
+          <Text style={{fontFamily:fonts.sans,fontSize:n>=3?13:11,color:n>=3?colors.accent:colors.text2}}>{t}</Text>
+        </View>)}
+      </View>
+      <Text style={quote}>"Unreliable narrators and found family. You contain multitudes."</Text>
+    </View>}
+
+    {/* Reader profile */}
+    <View style={sec}>
+      <Text style={[type.label,{marginBottom:14}]}>Your Reader Profile</Text>
+      <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24,marginBottom:10}}>You gravitate toward <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>slow-burn literary fiction</Text> with emotionally devastating payoffs. You have a high tolerance for <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>unreliable narrators</Text> and an unusual appetite for books that make you feel worse about everything.</Text>
+      <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24}}>Your comfort zone: <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>Ireland, New York, and anywhere with repressed feelings</Text>. You read for prose over plot, and you have never once picked up a thriller.</Text>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginTop:14}}>
+        {FRIENDS.filter(f=>f.match>=70).map(f=><Text key={f.id} style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}}>{f.name.split(' ')[0]} <Text style={{color:colors.accent}}>{f.match}%</Text>{'   '}</Text>)}
+      </View>
     </View>
 
     {/* Goal ring */}

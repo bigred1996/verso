@@ -2,7 +2,7 @@ import React,{useState,useEffect} from 'react';
 import {Modal,View,Text,ScrollView,TouchableOpacity,TextInput,SafeAreaView,StatusBar,Platform,Share} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {colors,spacing,fonts,type} from '../constants/theme';
-import {BOOKS,PAGE_COUNTS,AUTHOR_DATA} from '../data/books';
+import {BOOKS,PAGE_COUNTS,AUTHOR_DATA,BOOK_TAGS,FRIEND_BOOK,FRIENDS} from '../data/books';
 import type {ShelfStatus,Format} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
@@ -22,7 +22,7 @@ const HOT_PLACEHOLDERS=[
 interface Props { bookId:string|null; onClose:()=>void; }
 
 export default function BookDetailModal({bookId,onClose}:Props){
-  const {shelf,ratings,formats,rereads,journal,userTags,reviews,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview}=useStore();
+  const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
 
   // Internal active id so tapping a book inside the author sheet navigates here
@@ -46,6 +46,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const [forWhom,setForWhom]=useState('');
   const [revSaved,setRevSaved]=useState(false);
   const [authorOpen,setAuthorOpen]=useState<string|null>(null);
+  const [buddyPicking,setBuddyPicking]=useState(false);
 
   // hydrate review fields when the active book changes
   useEffect(()=>{
@@ -63,6 +64,10 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const rr=rereads[bid]||[];
   const tags=userTags[bid]||[];
   const savedReview=reviews[bid];
+  const meta=BOOK_TAGS[bid];
+  const friendTakes=FRIEND_BOOK[bid]||{};
+  const friendIds=Object.keys(friendTakes);
+  const buddy=buddyReads.find(b=>b.bookId===bid);
   const total=PAGE_COUNTS[bid]||book.pages||280;
   const pct=j?Math.min(100,Math.round(j.page/total*100)):0;
   const hasAuthorPage=!!AUTHOR_DATA[book.author]||all.filter(b=>b.author===book.author).length>1;
@@ -202,6 +207,52 @@ export default function BookDetailModal({bookId,onClose}:Props){
           {shareFeedback&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent,marginTop:8}}>{shareFeedback}</Text>}
         </View>
 
+        {/* Buddy Read */}
+        <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={[type.label,{marginBottom:10}]}>Buddy Read</Text>
+          {buddy?(()=>{const f=FRIENDS.find(x=>x.id===buddy.partner);const myPct=Math.min(100,Math.round(buddy.myPage/total*100));const thPct=Math.min(100,Math.round(buddy.theirPage/total*100));
+            return <View style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:14}}>
+              <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2,marginBottom:10}}>You and <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>{f?.name.split(' ')[0]}</Text> are reading together.</Text>
+              <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:4}}>
+                <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>You · p.{buddy.myPage}</Text>
+                <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{f?.name.split(' ')[0]} · p.{buddy.theirPage}</Text>
+              </View>
+              <View style={{height:4,backgroundColor:colors.surface2,marginBottom:10}}>
+                <View style={{position:'absolute',height:4,backgroundColor:'rgba(123,158,166,0.5)',width:`${thPct}%`}}/>
+                <View style={{position:'absolute',height:4,backgroundColor:colors.accent,width:`${myPct}%`}}/>
+              </View>
+              <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3,marginBottom:10}}>"{buddy.note}"</Text>
+              <TouchableOpacity onPress={()=>endBuddyRead(bid)}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>End buddy read</Text></TouchableOpacity>
+            </View>;})():buddyPicking?<View>
+              <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,marginBottom:10}}>Who do you want to read with?</Text>
+              {FRIENDS.map(f=><TouchableOpacity key={f.id} onPress={()=>{startBuddyRead(bid,f.id);setBuddyPicking(false);}}
+                style={{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:9}}>
+                <View style={{width:30,height:30,borderRadius:15,backgroundColor:f.color+'24',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:12,color:f.color}}>{f.init}</Text></View>
+                <View style={{flex:1}}><Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text}}>{f.name}</Text><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{f.match}% taste match</Text></View>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent}}>Invite</Text>
+              </TouchableOpacity>)}
+              <TouchableOpacity onPress={()=>setBuddyPicking(false)}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:6}}>Cancel</Text></TouchableOpacity>
+            </View>:<TouchableOpacity onPress={()=>setBuddyPicking(true)} style={[chip,{alignSelf:'flex-start'}]}>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text2}}>+ Start a Buddy Read</Text>
+            </TouchableOpacity>}
+        </View>
+
+        {/* Friends on this book */}
+        {friendIds.length>0&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={[type.label,{marginBottom:10}]}>Friends on This Book</Text>
+          {friendIds.map(fid=>{const f=FRIENDS.find(x=>x.id===fid);const ft=friendTakes[fid];if(!f)return null;
+            return <View key={fid} style={{flexDirection:'row',gap:10,paddingVertical:8,alignItems:'flex-start'}}>
+              <View style={{width:30,height:30,borderRadius:15,backgroundColor:f.color+'24',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:12,color:f.color}}>{f.init}</Text></View>
+              <View style={{flex:1}}>
+                <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+                  <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text}}>{f.name.split(' ')[0]}</Text>
+                  <Text style={{fontSize:11,color:colors.accent}}>{'★'.repeat(ft.r)}</Text>
+                </View>
+                <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text2,lineHeight:19,marginTop:2}}>"{ft.t}"</Text>
+              </View>
+            </View>;})}
+        </View>}
+
         {/* Sub-tabs */}
         <View style={{flexDirection:'row',borderBottomWidth:1,borderBottomColor:colors.border}}>
           {([['detail','Details'],['review','Review'],['journal','Journal'],['rereads','Re-reads']] as const).map(([k,label])=><TouchableOpacity key={k} onPress={()=>setTab(k)}
@@ -227,6 +278,29 @@ export default function BookDetailModal({bookId,onClose}:Props){
               <Text style={{fontFamily:fonts.serif,fontSize:14,color:colors.text,fontStyle:'italic',lineHeight:21,marginBottom:3}}>"{tk.t}"</Text>
               <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>— {tk.u}</Text>
             </View>)}
+          </View>}
+          {meta&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+            <Text style={[type.label,{marginBottom:10}]}>Tropes & Themes</Text>
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:12}}>
+              {meta.tropes.map(t=><View key={t} style={{paddingHorizontal:9,paddingVertical:4,backgroundColor:colors.accentDim,borderWidth:1,borderColor:'rgba(61,107,72,0.35)'}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent}}>{t}</Text></View>)}
+            </View>
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
+              {meta.themes.map(t=><View key={t} style={pill}><Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{t}</Text></View>)}
+            </View>
+          </View>}
+          {meta&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+            <Text style={[type.label,{marginBottom:10}]}>Form & Setting</Text>
+            <View style={{gap:6}}>
+              <View style={{flexDirection:'row'}}><Text style={metaK}>Subgenre</Text><Text style={metaV}>{meta.subgenres.join(' · ')}</Text></View>
+              <View style={{flexDirection:'row'}}><Text style={metaK}>Perspective</Text><Text style={metaV}>{meta.perspective}</Text></View>
+              <View style={{flexDirection:'row'}}><Text style={metaK}>Setting</Text><Text style={metaV}>{meta.setting}</Text></View>
+            </View>
+          </View>}
+          {meta&&meta.cw.length>0&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+            <Text style={[type.label,{marginBottom:10}]}>Content Warnings</Text>
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
+              {meta.cw.map(c=><View key={c} style={{paddingHorizontal:9,paddingVertical:4,borderWidth:1,borderColor:'rgba(166,90,90,0.4)'}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B'}}>{c}</Text></View>)}
+            </View>
           </View>}
           <View style={{padding:spacing.lg}}>
             <Text style={[type.label,{marginBottom:10}]}>Book Info</Text>
@@ -329,3 +403,5 @@ const chip:any={paddingHorizontal:14,paddingVertical:9,backgroundColor:colors.su
 const activeChip:any={backgroundColor:colors.accentDim,borderColor:colors.accent};
 const inp:any={fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10};
 const btn:any={backgroundColor:colors.accent,padding:13,alignItems:'center',marginTop:6};
+const metaK:any={fontFamily:fonts.sans,fontSize:12,color:colors.text3,width:96};
+const metaV:any={fontFamily:fonts.sans,fontSize:12,color:colors.text2,flex:1};

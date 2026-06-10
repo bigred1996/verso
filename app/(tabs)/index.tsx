@@ -1,13 +1,14 @@
 import React,{useState} from 'react';
 import {ScrollView,View,Text,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
 import {colors,spacing,fonts,type} from '../../constants/theme';
-import {BOOKS,FRIENDS,PAGE_COUNTS} from '../../data/books';
+import {BOOKS,FRIENDS,PAGE_COUNTS,CHALLENGES} from '../../data/books';
 import {useStore} from '../../store';
 import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
 import SwipeModal from '../../components/SwipeModal';
 import BookClubModal from '../../components/BookClubModal';
 import AddBookModal from '../../components/AddBookModal';
+import ChallengeModal from '../../components/ChallengeModal';
 
 const MOODS=['emotional','dark','reflective','tense','sad','mysterious','funny','inspiring'];
 
@@ -19,6 +20,7 @@ export default function HomeScreen(){
   const [showSwipe,setShowSwipe]=useState(false);
   const [showClub,setShowClub]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
+  const [challengeId,setChallengeId]=useState<string|null>(null);
 
   const reading=allBooks.filter(b=>shelf[b.id]==='reading');
   const moodBooks=mood?allBooks.filter(b=>b.genres.some(g=>g.toLowerCase().includes('fiction'))).slice(0,5):BOOKS.slice(0,5);
@@ -91,6 +93,20 @@ export default function HomeScreen(){
           <Text style={{fontSize:18,color:colors.accent}}>→</Text>
         </TouchableOpacity>
 
+        {/* Reading Challenges */}
+        <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8}}>
+          <Text style={type.label}>Reading Challenges</Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
+          {CHALLENGES.map(ch=>{const pct=Math.round(ch.done.length/ch.goal*100);return <TouchableOpacity key={ch.id} onPress={()=>setChallengeId(ch.id)} activeOpacity={0.85}
+            style={{width:230,marginRight:14,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:ch.featured?colors.accent:colors.border}}>
+            {ch.featured&&<Text style={{fontFamily:fonts.sansBold,fontSize:8,color:colors.accent,letterSpacing:1.6,textTransform:'uppercase',marginBottom:6}}>Featured</Text>}
+            <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,lineHeight:20,marginBottom:8}} numberOfLines={2}>{ch.title}</Text>
+            <View style={{height:3,backgroundColor:colors.surface2,marginBottom:6}}><View style={{width:`${pct}%`,height:3,backgroundColor:colors.accent}}/></View>
+            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{ch.done.length}/{ch.goal} · {ch.readers.toLocaleString()} readers</Text>
+          </TouchableOpacity>;})}
+        </ScrollView>
+
         {/* Mood */}
         <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:8,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
           <Text style={type.label}>Tonight's Mood</Text>
@@ -121,6 +137,7 @@ export default function HomeScreen(){
       {showSwipe&&<SwipeModal visible onClose={()=>setShowSwipe(false)} onOpenBook={id=>{setShowSwipe(false);setDetailId(id);}}/>}
       {showClub&&<BookClubModal visible onClose={()=>setShowClub(false)} onOpenBook={id=>{setShowClub(false);setDetailId(id);}}/>}
       {showAdd&&<AddBookModal visible onClose={()=>setShowAdd(false)}/>}
+      <ChallengeModal challengeId={challengeId} onClose={()=>setChallengeId(null)} onOpenBook={id=>{setChallengeId(null);setDetailId(id);}}/>
     </SafeAreaView>
   );
 }

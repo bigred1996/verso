@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ShelfStatus, Format, Book } from '../data/books';
 export interface RereadEntry { date:string;rating:number;note:string; }
 export interface Review { hotTake?:string; overall?:string; best?:string; forWhom?:string; date:string; }
+export interface BuddyRead { bookId:string; partner:string; myPage:number; theirPage:number; note:string; }
 export interface JournalEntry { date:string;page:number;note:string; }
 export interface JournalData  { page:number;entries:JournalEntry[]; }
 interface State {
@@ -13,6 +14,7 @@ interface State {
   swipeData:Record<string,'like'|'dislike'|'next'>; eloRatings:Record<string,number>; streakDays:string[];
   clubMessages:Record<string,{user:string;text:string;ts:string}[]>;
   reviews:Record<string,Review>;
+  buddyReads:BuddyRead[];
   setShelf:(id:string,s:ShelfStatus|null)=>void;
   setRating:(id:string,v:number)=>void;
   setFormat:(id:string,f:Format|null)=>void;
@@ -26,6 +28,9 @@ interface State {
   sendClubMessage:(clubId:string,text:string)=>void;
   setUserTags:(id:string,tags:string[])=>void;
   setReview:(id:string,r:Partial<Review>)=>void;
+  startBuddyRead:(bookId:string,partner:string)=>void;
+  endBuddyRead:(bookId:string)=>void;
+  joinChallenge:(id:string)=>void;
 }
 const TODAY=()=>{const d=new Date(2026,5,9);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();};
 const ELO_K=32;
@@ -40,6 +45,7 @@ export const useStore = create<State>()(persist((set)=>({
   journal:{'remains-of-the-day':{page:184,entries:[{date:'Jun 6',page:48,note:"Stevens is already insufferable."},{date:'Jun 7',page:112,note:"The repression is doing something to me."},{date:'Jun 8',page:184,note:"I am not okay."}]}},
   userTags:{}, customBooks:[], follows:{}, challengeJoined:{'literary-dozen':true},
   swipeData:{}, eloRatings:{}, streakDays:[], clubMessages:{}, reviews:{},
+  buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
   setShelf:(id,s)=>set(st=>{ const sh={...st.shelf}; if(s===null) delete sh[id]; else sh[id]=s; return {shelf:sh}; }),
   setRating:(id,v)=>set(st=>({ratings:{...st.ratings,[id]:v}})),
   setFormat:(id,f)=>set(st=>{ const fm={...st.formats}; if(f===null) delete fm[id]; else fm[id]=f; return {formats:fm}; }),
@@ -57,6 +63,9 @@ export const useStore = create<State>()(persist((set)=>({
   }),
   setUserTags:(id,tags)=>set(st=>({userTags:{...st.userTags,[id]:tags}})),
   setReview:(id,r)=>set(st=>{const cur=st.reviews[id]||{date:''};const ts=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][5]+' 9';return {reviews:{...st.reviews,[id]:{...cur,...r,date:ts}}};}),
+  startBuddyRead:(bookId,partner)=>set(st=>({buddyReads:[...st.buddyReads.filter(b=>b.bookId!==bookId),{bookId,partner,myPage:0,theirPage:0,note:'Just getting started.'}]})),
+  endBuddyRead:(bookId)=>set(st=>({buddyReads:st.buddyReads.filter(b=>b.bookId!==bookId)})),
+  joinChallenge:(id)=>set(st=>({challengeJoined:{...st.challengeJoined,[id]:!st.challengeJoined[id]}})),
   sendClubMessage:(clubId,text)=>set(st=>{
     const msgs=st.clubMessages[clubId]||[];
     const ts=TODAY();
