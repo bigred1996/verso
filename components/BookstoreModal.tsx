@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {Modal,View,Text,TouchableOpacity,TextInput,ScrollView,Linking,SafeAreaView,StatusBar,Platform} from 'react-native';
-import {colors,spacing} from '../constants/theme';
+import {colors,spacing,fonts} from '../constants/theme';
 
 const STORES=[
   {city:'New York',stores:[{name:'The Strand',note:'828 Broadway · est. 1927'},{name:'McNally Jackson',note:'52 Prince St'},{name:'Greenlight Bookstore',note:'686 Fulton St, Brooklyn'}]},
@@ -34,7 +34,7 @@ export default function BookstoreModal({visible,onClose}:Props){
       <StatusBar barStyle="light-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={onClose} style={{paddingRight:16}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
-        <Text style={{flex:1,fontSize:14,color:colors.text,fontWeight:'600'}}>Find a Bookstore</Text>
+        <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Find a Bookstore</Text>
       </View>
       <ScrollView contentContainerStyle={{padding:spacing.lg}} showsVerticalScrollIndicator={false}>
         <TextInput style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10,marginBottom:spacing.md}}

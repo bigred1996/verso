@@ -1,6 +1,6 @@
 import React,{useState,useRef} from 'react';
 import {Modal,View,Text,TouchableOpacity,ScrollView,TextInput,KeyboardAvoidingView,Platform,SafeAreaView,StatusBar} from 'react-native';
-import {colors,spacing} from '../constants/theme';
+import {colors,spacing,fonts} from '../constants/theme';
 import {BOOKS} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
@@ -48,7 +48,7 @@ export default function BookClubModal({visible,onClose,onOpenBook}:Props){
         <TouchableOpacity onPress={()=>{if(activeClub)setActiveClub(null);else onClose();}} style={{paddingRight:16}}>
           <Text style={{fontSize:22,color:colors.text3}}>{activeClub?'←':'←'}</Text>
         </TouchableOpacity>
-        <Text style={{flex:1,fontSize:14,color:colors.text,fontWeight:'600'}}>{club?club.name:'Book Clubs'}</Text>
+        <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>{club?club.name:'Book Clubs'}</Text>
       </View>
 
       {!activeClub&&<ScrollView contentContainerStyle={{padding:spacing.lg,gap:12}}>

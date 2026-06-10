@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {Modal,View,Text,TouchableOpacity,TextInput,ScrollView,SafeAreaView,StatusBar,Alert,Platform} from 'react-native';
-import {colors,spacing} from '../constants/theme';
+import {colors,spacing,fonts} from '../constants/theme';
 import {useStore} from '../store';
 import {BOOKS} from '../data/books';
 import type {Book} from '../data/books';
@@ -56,15 +56,21 @@ export default function ImportExportModal({visible,onClose}:Props){
   function confirmImport(){
     if(!preview) return;
     const existing=customBooks||[];
-    const existIds=new Set([...BOOKS.map(b=>b.id),...existing.map(b=>b.id)]);
+    // Dedupe by title: if the book is already in the catalogue or library,
+    // apply shelf/rating to the existing entry instead of duplicating it
+    const byTitle=new Map([...BOOKS,...existing].map(b=>[b.title.toLowerCase(),b.id]));
     const newBooks:Book[]=[];
     preview.forEach((p,i)=>{
-      const id='import-'+Date.now()+'-'+i;
-      if(!existIds.has(id)){
-        newBooks.push({id,title:p.title,author:p.author,year:0,genres:[],synopsis:'',avgRating:0,readers:0,dist:[0,0,0,0,0],takes:[],ci:Date.now()+i,isCustom:true,pages:280});
-        setShelf(id,p.shelf as any);
-        if(p.rating>0) setRating(id,p.rating);
+      const existingId=byTitle.get(p.title.toLowerCase());
+      if(existingId){
+        setShelf(existingId,p.shelf as any);
+        if(p.rating>0) setRating(existingId,p.rating);
+        return;
       }
+      const id='import-'+Date.now()+'-'+i;
+      newBooks.push({id,title:p.title,author:p.author,year:0,genres:[],synopsis:'',avgRating:0,readers:0,dist:[0,0,0,0,0],takes:[],ci:Date.now()+i,isCustom:true,pages:280});
+      setShelf(id,p.shelf as any);
+      if(p.rating>0) setRating(id,p.rating);
     });
     setCustomBooks([...existing,...newBooks]);
     setImported(true);
@@ -77,7 +83,7 @@ export default function ImportExportModal({visible,onClose}:Props){
       <StatusBar barStyle="light-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={onClose} style={{paddingRight:16}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
-        <Text style={{flex:1,fontSize:14,color:colors.text,fontWeight:'600'}}>Import / Export</Text>
+        <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Import / Export</Text>
       </View>
       <View style={{flexDirection:'row',borderBottomWidth:1,borderBottomColor:colors.border}}>
         {(['export','import'] as const).map(t=><TouchableOpacity key={t} onPress={()=>setTab(t)}

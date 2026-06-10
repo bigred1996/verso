@@ -1,6 +1,6 @@
 import React,{useState,useRef} from 'react';
 import {Modal,View,Text,TextInput,TouchableOpacity,ScrollView,SafeAreaView,StatusBar,ActivityIndicator} from 'react-native';
-import {colors,spacing} from '../constants/theme';
+import {colors,spacing,fonts} from '../constants/theme';
 import {useStore} from '../store';
 import type {Book} from '../data/books';
 import BookCover from './BookCover';
@@ -88,7 +88,7 @@ export default function AddBookModal({visible,onClose}:Props){
       <StatusBar barStyle="light-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={close} style={{paddingRight:16}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
-        <Text style={{flex:1,fontSize:14,color:colors.text,fontWeight:'600'}}>Add a Book</Text>
+        <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Add a Book</Text>
       </View>
       <View style={{flexDirection:'row',borderBottomWidth:1,borderBottomColor:colors.border}}>
         {(['search','manual'] as const).map(t=><TouchableOpacity key={t} onPress={()=>setTab(t)}

@@ -22,6 +22,7 @@ interface State {
   addJournalEntry:(id:string,e:JournalEntry)=>void;
   updateElo:(ids:string[],winner:string)=>void;
   sendClubMessage:(clubId:string,text:string)=>void;
+  setUserTags:(id:string,tags:string[])=>void;
 }
 const TODAY=()=>{const d=new Date(2026,5,9);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();};
 const ELO_K=32;
@@ -51,6 +52,7 @@ export const useStore = create<State>()(persist((set)=>({
     const [na,nb]=calcElo(ra,rb,winner===a);
     return {eloRatings:{...st.eloRatings,[a]:na,[b]:nb}};
   }),
+  setUserTags:(id,tags)=>set(st=>({userTags:{...st.userTags,[id]:tags}})),
   sendClubMessage:(clubId,text)=>set(st=>{
     const msgs=st.clubMessages[clubId]||[];
     const ts=TODAY();

@@ -3,7 +3,7 @@ export type Format = 'print'|'ebook'|'audio';
 export interface Book { id:string;title:string;author:string;year:number;genres:string[];synopsis:string;avgRating:number;readers:number;dist:number[];takes:{t:string;u:string}[];ci:number;isCustom?:boolean;olCoverId?:number|null;pages?:number; }
 export interface Friend { id:string;name:string;match:number;bookId:string;status:string;init:string;color:string; }
 export const ISBNS:Record<string,string> = {'normal-people':'9780571334650','conversations-with-friends':'9780571333134','intermezzo':'9780374611996','a-little-life':'9780316301930','stoner':'9781590170014','the-road':'9780307387899','remains-of-the-day':'9780679731726','white-noise':'9780143105985','pachinko':'9781455563937','my-year-of-rest':'9780525522089','demon-copperhead':'9780063251922','james':'9780385550369','the-sympathizer':'9780802123459'};
-export const COVER_IDS:Record<string,number> = {'my-year-of-rest':8202400};
+export const COVER_IDS:Record<string,number> = {'my-year-of-rest':8202400,'stoner':8310729,'intermezzo':14836043};
 export const PAGE_COUNTS:Record<string,number> = {'normal-people':273,'conversations-with-friends':321,'intermezzo':384,'a-little-life':720,'stoner':278,'the-road':287,'remains-of-the-day':256,'white-noise':326,'pachinko':496,'my-year-of-rest':304,'demon-copperhead':548,'james':320,'the-sympathizer':371};
 export const BOOKS:Book[] = [
   {id:'normal-people',title:'Normal People',author:'Sally Rooney',year:2018,genres:['Literary Fiction','Romance'],synopsis:'Connell and Marianne grow up in the same small town in west Ireland.',avgRating:4.1,readers:842190,dist:[12000,28000,95000,312000,395190],takes:[{t:'Rooney does in 273 pages what most authors fail to do in 800.',u:'Elif'}],ci:0},
