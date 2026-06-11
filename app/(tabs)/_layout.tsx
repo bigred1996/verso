@@ -13,7 +13,7 @@ function Icon({name,color}:{name:string;color:any}){
 }
 
 export default function TabLayout(){
-  return <Tabs screenOptions={{tabBarActiveTintColor:colors.accent,tabBarInactiveTintColor:colors.text3,tabBarStyle:{backgroundColor:colors.surface,borderTopColor:colors.border,borderTopWidth:1,height:60,paddingBottom:8},tabBarLabelStyle:{fontFamily:fonts.sansMedium,fontSize:10,letterSpacing:0.3},headerShown:false}}>
+  return <Tabs screenOptions={{tabBarActiveTintColor:colors.accent,tabBarInactiveTintColor:colors.text3,tabBarStyle:{backgroundColor:colors.surface,borderTopColor:'transparent',borderTopWidth:0,height:64,paddingBottom:10,paddingTop:4,borderTopLeftRadius:20,borderTopRightRadius:20},tabBarLabelStyle:{fontFamily:fonts.sansMedium,fontSize:10,letterSpacing:0.3},headerShown:false}}>
     <Tabs.Screen name="index"  options={{title:'Discover',tabBarIcon:({color})=><Icon name="discover" color={color}/>}}/>
     <Tabs.Screen name="social" options={{title:'Social',  tabBarIcon:({color})=><Icon name="social" color={color}/>}}/>
     <Tabs.Screen name="shelf"  options={{title:'Shelf',   tabBarIcon:({color})=><Icon name="shelf" color={color}/>}}/>

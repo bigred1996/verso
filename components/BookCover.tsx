@@ -10,5 +10,5 @@ export default function BookCover({bookId,size='sm',style,olCoverId}:Props){
   const cid=olCoverId??COVER_IDS[bookId]; const isbn=ISBNS[bookId];
   const src=cid?`https://covers.openlibrary.org/b/id/${cid}-M.jpg`:isbn?`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg`:null;
   const bg=G[bookId.split('').reduce((n,c)=>n+c.charCodeAt(0),0)%G.length];
-  return <View style={[d,{backgroundColor:bg,overflow:'hidden',flexShrink:0},style]}><View style={[StyleSheet.absoluteFill,{backgroundColor:'#000',opacity:0.3}]}/>{src&&!f&&<Image source={{uri:src}} style={StyleSheet.absoluteFill} resizeMode="cover" onError={()=>setF(true)}/>}</View>;
+  return <View style={[d,{backgroundColor:bg,overflow:'hidden',flexShrink:0,borderRadius:8},style]}><View style={[StyleSheet.absoluteFill,{backgroundColor:'#000',opacity:0.3}]}/>{src&&!f&&<Image source={{uri:src}} style={StyleSheet.absoluteFill} resizeMode="cover" onError={()=>setF(true)}/>}</View>;
 }

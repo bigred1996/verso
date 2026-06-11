@@ -48,7 +48,7 @@ export default function FriendProfileModal({friendId,onClose,onOpenBook}:Props){
           <Text style={[type.label,{marginBottom:12}]}>Their year</Text>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
             {[{v:String(st.books),l:'Books read'},{v:st.pages,l:'Pages'},{v:st.avg.toFixed(1)+'★',l:'Avg rating'},{v:st.streak+'d',l:'Streak'}].map(c=>
-              <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:colors.surface2,padding:14}}>
+              <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:colors.surface2,padding:14,borderRadius:12}}>
                 <Text style={{fontFamily:fonts.serifBold,fontSize:22,color:colors.accent}}>{c.v}</Text>
                 <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,marginTop:4}}>{c.l}</Text>
               </View>)}
@@ -57,7 +57,7 @@ export default function FriendProfileModal({friendId,onClose,onOpenBook}:Props){
         {/* Their books */}
         <View style={{padding:spacing.lg}}>
           <Text style={[type.label,{marginBottom:10}]}>What they've rated</Text>
-          {theirBooks.map(({b,r,t})=><TouchableOpacity key={b.id} onPress={()=>onOpenBook(b.id)} style={{flexDirection:'row',gap:12,paddingVertical:10,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          {theirBooks.map(({b,r,t})=><TouchableOpacity key={b.id} onPress={()=>onOpenBook(b.id)} style={{flexDirection:'row',gap:12,padding:12,backgroundColor:colors.surface,borderRadius:12,marginBottom:8}}>
             <BookCover bookId={b.id} size="sm"/>
             <View style={{flex:1}}>
               <View style={{flexDirection:'row',alignItems:'center',gap:8}}><Text style={{fontFamily:fonts.serifBold,fontSize:14,color:colors.text}} numberOfLines={1}>{b.title}</Text><Text style={{fontSize:11,color:colors.accent}}>{'★'.repeat(r)}</Text></View>

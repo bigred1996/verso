@@ -39,9 +39,9 @@ export default function ChallengeModal({challengeId,onClose,onOpenBook}:Props){
             <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Your progress</Text>
             <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.text2}}>{progress} / {ch.goal} · {pct}%</Text>
           </View>
-          <View style={{height:4,backgroundColor:colors.surface2}}><View style={{width:`${pct}%`,height:4,backgroundColor:colors.accent}}/></View>
+          <View style={{height:4,backgroundColor:colors.surface2,borderRadius:999}}><View style={{width:`${pct}%`,height:4,backgroundColor:colors.accent,borderRadius:999}}/></View>
           <TouchableOpacity onPress={()=>joinChallenge(ch.id)}
-            style={{marginTop:14,padding:13,alignItems:'center',backgroundColor:joined?colors.accentDim:colors.accent,borderWidth:1,borderColor:colors.accent}}>
+            style={{marginTop:14,padding:13,alignItems:'center',backgroundColor:joined?colors.accentDim:colors.accent,borderWidth:1,borderColor:colors.accent,borderRadius:999}}>
             <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:joined?colors.accent:colors.bg}}>{joined?'Joined ✓':'Join Challenge'}</Text>
           </TouchableOpacity>
         </View>

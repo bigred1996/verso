@@ -49,7 +49,7 @@ export default function DiscoverScreen(){
 
   function Row({id,extra}:{id:string;extra?:React.ReactNode}){
     const b=allBooks.find(x=>x.id===id); if(!b) return null;
-    return <TouchableOpacity onPress={()=>setDetailId(id)} activeOpacity={0.8} style={{flexDirection:'row',gap:12,padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+    return <TouchableOpacity onPress={()=>setDetailId(id)} activeOpacity={0.8} style={{flexDirection:'row',gap:12,padding:spacing.lg,backgroundColor:colors.surface,borderRadius:16,marginHorizontal:spacing.lg,marginBottom:8}}>
       <BookCover bookId={id} size="sm"/>
       <View style={{flex:1,justifyContent:'center'}}>
         <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text}} numberOfLines={1}>{b.title}</Text>
@@ -65,19 +65,19 @@ export default function DiscoverScreen(){
     {/* Header */}
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
       <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Verso</Text>
-      <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:12,paddingVertical:6,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border}}>
+      <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:14,paddingVertical:7,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:999}}>
         <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text}}>+ Add Book</Text>
       </TouchableOpacity>
     </View>
     {/* Search */}
     <View style={{paddingHorizontal:spacing.lg,paddingBottom:10}}>
-      <TextInput style={{fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:14,paddingHorizontal:14,paddingVertical:10}}
+      <TextInput style={{fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:14,paddingHorizontal:14,paddingVertical:10,borderRadius:12}}
         placeholder="Search title, author, ISBN…" placeholderTextColor={colors.text3} value={q} onChangeText={setQ} autoCapitalize="none" autoCorrect={false}/>
     </View>
     {/* Pill sub-nav */}
-    {!searching&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,borderBottomWidth:1,borderBottomColor:colors.border}} contentContainerStyle={{paddingHorizontal:spacing.lg}}>
-      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:14,paddingVertical:12,borderBottomWidth:2,borderBottomColor:sub===s?colors.accent:'transparent'}}>
-        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.accent:colors.text3,letterSpacing:0.4}}>{s}</Text>
+    {!searching&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0}} contentContainerStyle={{paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
+      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:16,paddingVertical:7,borderRadius:999,backgroundColor:sub===s?colors.accent:colors.surface2,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.text:colors.text2}}>{s}</Text>
       </TouchableOpacity>)}
     </ScrollView>}
 
@@ -87,7 +87,7 @@ export default function DiscoverScreen(){
         <Text style={[type.label,{padding:spacing.lg,paddingBottom:8}]}>{results.length} result{results.length!==1?'s':''}</Text>
         {results.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>★ {b.avgRating||'—'}{BOOK_VIBES[b.id]?` · ${BOOK_VIBES[b.id].pace}`:''}</Text>}/>)}
         {/* Add-from-search: always offer when searching, prominent when nothing matches */}
-        <TouchableOpacity onPress={()=>{setAddPrefill(q.trim());setShowAdd(true);}} style={{margin:spacing.lg,padding:14,borderWidth:1,borderColor:colors.accent,backgroundColor:colors.accentDim,alignItems:'center'}}>
+        <TouchableOpacity onPress={()=>{setAddPrefill(q.trim());setShowAdd(true);}} style={{margin:spacing.lg,padding:14,borderWidth:1,borderColor:colors.accent,backgroundColor:colors.accentDim,alignItems:'center',borderRadius:12}}>
           <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.accent}}>{results.length?'Not the right one? ':''}Add "{q.trim()}" to Verso →</Text>
         </TouchableOpacity>
         {results.length===0&&<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingHorizontal:spacing.xl}}>We don't have it yet — but we can. Tap above and we'll pull it from Open Library.</Text>}
@@ -151,7 +151,7 @@ export default function DiscoverScreen(){
       {sub==='Zeitgeist'&&<View>
         <View style={{flexDirection:'row',gap:8,padding:spacing.lg,paddingBottom:8}}>
           {([['trending','Trending this week'],['new','New releases']] as const).map(([k,l])=><TouchableOpacity key={k} onPress={()=>setZTab(k)}
-            style={{paddingHorizontal:12,paddingVertical:7,backgroundColor:zTab===k?colors.accentDim:colors.surface,borderWidth:1,borderColor:zTab===k?colors.accent:colors.border}}>
+            style={{paddingHorizontal:12,paddingVertical:7,backgroundColor:zTab===k?colors.accentDim:colors.surface,borderWidth:1,borderColor:zTab===k?colors.accent:colors.border,borderRadius:999}}>
             <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:zTab===k?colors.accent:colors.text3}}>{l}</Text>
           </TouchableOpacity>)}
         </View>
@@ -194,6 +194,6 @@ export default function DiscoverScreen(){
     {showAdd&&<AddBookModal visible prefill={addPrefill} onClose={()=>{setShowAdd(false);setAddPrefill('');}}/>}
   </SafeAreaView>;
 }
-const card:any={marginHorizontal:spacing.lg,marginTop:spacing.md,marginBottom:spacing.sm,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,flexDirection:'row',alignItems:'center'};
-const chip:any={paddingHorizontal:14,paddingVertical:7,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border};
+const card:any={marginHorizontal:spacing.lg,marginTop:spacing.md,marginBottom:spacing.sm,padding:14,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,flexDirection:'row',alignItems:'center',borderRadius:16};
+const chip:any={paddingHorizontal:14,paddingVertical:7,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:999};
 const activeChip:any={backgroundColor:colors.accentDim,borderColor:colors.accent};

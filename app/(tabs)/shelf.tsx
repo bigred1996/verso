@@ -73,7 +73,7 @@ export default function ShelfScreen(){
   function Journal(){
     const reading=all.filter(b=>journal[b.id]&&(journal[b.id].entries||[]).length>0);
     if(!reading.length) return <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>No journal entries yet. Log progress on a book you're reading.</Text>;
-    return <View>{reading.map(b=>{const j=journal[b.id];return <View key={b.id} style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+    return <View style={{paddingTop:8}}>{reading.map(b=>{const j=journal[b.id];return <View key={b.id} style={{padding:spacing.lg,backgroundColor:colors.surface,borderRadius:16,marginHorizontal:spacing.lg,marginBottom:8}}>
       <TouchableOpacity onPress={()=>setDetailId(b.id)} style={{flexDirection:'row',gap:12,marginBottom:10}}>
         <BookCover bookId={b.id} size="sm"/>
         <View style={{flex:1,justifyContent:'center'}}><Text style={s.title}>{b.title}</Text><Text style={s.author}>{b.author} · p.{j.page}</Text></View>
@@ -110,9 +110,9 @@ export default function ShelfScreen(){
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10}}>
       <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Shelf</Text>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,borderBottomWidth:1,borderBottomColor:colors.border}} contentContainerStyle={{paddingHorizontal:spacing.lg}}>
-      {SUBS.map(t=><TouchableOpacity key={t} onPress={()=>setSub(t)} style={{paddingHorizontal:14,paddingVertical:12,borderBottomWidth:2,borderBottomColor:sub===t?colors.accent:'transparent'}}>
-        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===t?colors.accent:colors.text3,letterSpacing:0.4}}>{t}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0}} contentContainerStyle={{paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
+      {SUBS.map(t=><TouchableOpacity key={t} onPress={()=>setSub(t)} style={{paddingHorizontal:16,paddingVertical:8,borderRadius:999,backgroundColor:sub===t?colors.accent:colors.surface2,borderWidth:1,borderColor:sub===t?colors.accent:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:sub===t?colors.text:colors.text2}}>{t}</Text>
       </TouchableOpacity>)}
     </ScrollView>
 
@@ -127,7 +127,7 @@ export default function ShelfScreen(){
         {/* shelf switcher + sort */}
         <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingTop:12}}>
           <View style={{flexDirection:'row',gap:8}}>
-            {SHELF_TABS.map(t=><TouchableOpacity key={t.k} onPress={()=>setShelfTab(t.k)} style={{paddingHorizontal:11,paddingVertical:6,backgroundColor:shelfTab===t.k?colors.accentDim:colors.surface,borderWidth:1,borderColor:shelfTab===t.k?colors.accent:colors.border}}>
+            {SHELF_TABS.map(t=><TouchableOpacity key={t.k} onPress={()=>setShelfTab(t.k)} style={{paddingHorizontal:11,paddingVertical:6,backgroundColor:shelfTab===t.k?colors.accentDim:colors.surface,borderWidth:1,borderColor:shelfTab===t.k?colors.accent:colors.border,borderRadius:999}}>
               <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:shelfTab===t.k?colors.accent:colors.text3}}>{t.l}</Text>
             </TouchableOpacity>)}
           </View>
@@ -142,4 +142,4 @@ export default function ShelfScreen(){
     <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
   </SafeAreaView>;
 }
-const s={item:{flexDirection:'row' as const,padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border,gap:12},title:{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3},author:{fontFamily:fonts.sans,fontSize:12,color:colors.text3}};
+const s={item:{flexDirection:'row' as const,padding:spacing.lg,backgroundColor:colors.surface,borderRadius:16,marginHorizontal:spacing.lg,marginBottom:8,gap:12},title:{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3},author:{fontFamily:fonts.sans,fontSize:12,color:colors.text3}};

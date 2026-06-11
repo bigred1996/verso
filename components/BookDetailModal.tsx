@@ -177,7 +177,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
         {vibe&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
           <Text style={[type.label,{marginBottom:10}]}>The Vibe</Text>
           <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:14}}>
-            {vibe.moods.map((m,i)=><View key={m} style={{paddingHorizontal:10,paddingVertical:4,backgroundColor:i<3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:i<3?'rgba(61,107,72,0.4)':colors.border}}>
+            {vibe.moods.map((m,i)=><View key={m} style={{paddingHorizontal:10,paddingVertical:4,backgroundColor:i<3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:i<3?'rgba(61,107,72,0.4)':colors.border,borderRadius:999}}>
               <Text style={{fontFamily:fonts.sans,fontSize:11,color:i<3?colors.accent:colors.text3}}>{m}</Text>
             </View>)}
           </View>
@@ -253,14 +253,14 @@ export default function BookDetailModal({bookId,onClose}:Props){
         <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
           <Text style={[type.label,{marginBottom:10}]}>Your Tags</Text>
           {tags.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10}}>
-            {tags.map(t=><TouchableOpacity key={t} onPress={()=>removeTag(t)} style={{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:10,paddingVertical:5,backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent}}>
+            {tags.map(t=><TouchableOpacity key={t} onPress={()=>removeTag(t)} style={{flexDirection:'row',alignItems:'center',gap:6,paddingHorizontal:10,paddingVertical:5,backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent,borderRadius:999}}>
               <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent}}>{t}</Text>
               <Text style={{fontSize:10,color:colors.accent}}>✕</Text>
             </TouchableOpacity>)}
           </View>}
           <View style={{flexDirection:'row',gap:8}}>
             <TextInput style={[inp,{flex:1}]} placeholder="Add a tag… (e.g. comfort read)" placeholderTextColor={colors.text3} value={tagInput} onChangeText={setTagInput} onSubmitEditing={addTag} returnKeyType="done"/>
-            <TouchableOpacity onPress={addTag} style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,paddingHorizontal:14,justifyContent:'center'}}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text}}>Add</Text></TouchableOpacity>
+            <TouchableOpacity onPress={addTag} style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,paddingHorizontal:14,justifyContent:'center',borderRadius:12}}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text}}>Add</Text></TouchableOpacity>
           </View>
         </View>
 
@@ -287,7 +287,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
         <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
           <Text style={[type.label,{marginBottom:10}]}>Buddy Read</Text>
           {buddy?(()=>{const f=FRIENDS.find(x=>x.id===buddy.partner);const myPct=Math.min(100,Math.round(buddy.myPage/total*100));const thPct=Math.min(100,Math.round(buddy.theirPage/total*100));
-            return <View style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:14}}>
+            return <View style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:14,borderRadius:16}}>
               <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2,marginBottom:10}}>You and <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>{f?.name.split(' ')[0]}</Text> are reading together.</Text>
               <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:4}}>
                 <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>You · p.{buddy.myPage}</Text>
@@ -330,10 +330,10 @@ export default function BookDetailModal({bookId,onClose}:Props){
         </View>}
 
         {/* Sub-tabs */}
-        <View style={{flexDirection:'row',borderBottomWidth:1,borderBottomColor:colors.border}}>
+        <View style={{flexDirection:'row',paddingHorizontal:spacing.lg,paddingVertical:10,gap:6}}>
           {([['detail','Details'],['review','Review'],['journal','Journal'],['rereads','Re-reads']] as const).map(([k,label])=><TouchableOpacity key={k} onPress={()=>setTab(k)}
-            style={{flex:1,paddingVertical:11,alignItems:'center',borderBottomWidth:2,borderBottomColor:tab===k?colors.accent:'transparent'}}>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:tab===k?colors.accent:colors.text3,letterSpacing:0.3}}>{label}</Text>
+            style={{flex:1,paddingVertical:8,alignItems:'center',borderRadius:999,backgroundColor:tab===k?colors.accent:colors.surface2,borderWidth:1,borderColor:tab===k?colors.accent:colors.border}}>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:tab===k?colors.text:colors.text3}}>{label}</Text>
           </TouchableOpacity>)}
         </View>
 
@@ -358,7 +358,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
           {meta&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
             <Text style={[type.label,{marginBottom:10}]}>Tropes & Themes</Text>
             <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:12}}>
-              {meta.tropes.map(t=><View key={t} style={{paddingHorizontal:9,paddingVertical:4,backgroundColor:colors.accentDim,borderWidth:1,borderColor:'rgba(61,107,72,0.35)'}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent}}>{t}</Text></View>)}
+              {meta.tropes.map(t=><View key={t} style={{paddingHorizontal:9,paddingVertical:4,backgroundColor:colors.accentDim,borderWidth:1,borderColor:'rgba(61,107,72,0.35)',borderRadius:999}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent}}>{t}</Text></View>)}
             </View>
             <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
               {meta.themes.map(t=><View key={t} style={pill}><Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{t}</Text></View>)}
@@ -375,7 +375,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
           {meta&&meta.cw.length>0&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
             <Text style={[type.label,{marginBottom:10}]}>Content Warnings</Text>
             <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
-              {meta.cw.map(c=><View key={c} style={{paddingHorizontal:9,paddingVertical:4,borderWidth:1,borderColor:'rgba(166,90,90,0.4)'}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B'}}>{c}</Text></View>)}
+              {meta.cw.map(c=><View key={c} style={{paddingHorizontal:9,paddingVertical:4,borderWidth:1,borderColor:'rgba(166,90,90,0.4)',borderRadius:6}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B'}}>{c}</Text></View>)}
             </View>
           </View>}
           <View style={{padding:spacing.lg}}>
@@ -395,10 +395,10 @@ export default function BookDetailModal({bookId,onClose}:Props){
             {savedReview.forWhom?<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,lineHeight:18}}><Text style={{color:colors.text2}}>For: </Text>{savedReview.forWhom}</Text>:null}
           </View>}
 
-          <View style={{flexDirection:'row',gap:0,marginBottom:spacing.md}}>
+          <View style={{flexDirection:'row',gap:6,marginBottom:spacing.md}}>
             {(['long','hot'] as const).map(m=><TouchableOpacity key={m} onPress={()=>setRevMode(m)}
-              style={{flex:1,paddingVertical:9,alignItems:'center',borderBottomWidth:2,borderBottomColor:revMode===m?colors.accent:colors.border}}>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:revMode===m?colors.accent:colors.text3}}>{m==='long'?'Long Take':'Hot Take'}</Text>
+              style={{flex:1,paddingVertical:9,alignItems:'center',borderRadius:999,backgroundColor:revMode===m?colors.accent:colors.surface2,borderWidth:1,borderColor:revMode===m?colors.accent:colors.border}}>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:revMode===m?colors.text:colors.text3}}>{m==='long'?'Long Take':'Hot Take'}</Text>
             </TouchableOpacity>)}
           </View>
 
@@ -474,10 +474,10 @@ export default function BookDetailModal({bookId,onClose}:Props){
   </Modal>;
 }
 
-const pill:any={paddingHorizontal:8,paddingVertical:3,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border};
-const chip:any={paddingHorizontal:14,paddingVertical:9,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border};
+const pill:any={paddingHorizontal:8,paddingVertical:3,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,borderRadius:999};
+const chip:any={paddingHorizontal:14,paddingVertical:9,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderRadius:999};
 const activeChip:any={backgroundColor:colors.accentDim,borderColor:colors.accent};
-const inp:any={fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10};
-const btn:any={backgroundColor:colors.accent,padding:13,alignItems:'center',marginTop:6};
+const inp:any={fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10,borderRadius:12};
+const btn:any={backgroundColor:colors.accent,padding:13,alignItems:'center',marginTop:6,borderRadius:999};
 const metaK:any={fontFamily:fonts.sans,fontSize:12,color:colors.text3,width:96};
 const metaV:any={fontFamily:fonts.sans,fontSize:12,color:colors.text2,flex:1};

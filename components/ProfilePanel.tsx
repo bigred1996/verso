@@ -24,7 +24,7 @@ export default function ProfilePanel(){
   const streak=(()=>{const labels=['Jun 9','Jun 8','Jun 7','Jun 6','Jun 5','Jun 4','Jun 3'];let s=0;for(const l of labels){if(streakDays.includes(l))s++;else break;}return s;})();
 
   return <View>
-    <View style={{margin:spacing.lg,marginBottom:0,padding:11,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
+    <View style={{margin:spacing.lg,marginBottom:0,padding:11,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,flexDirection:'row',justifyContent:'space-between',alignItems:'center',borderRadius:12}}>
       <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2}}>Moving from Goodreads or StoryGraph?</Text>
       <TouchableOpacity onPress={()=>setShowIE(true)}><Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accent}}>Import →</Text></TouchableOpacity>
     </View>
@@ -39,14 +39,14 @@ export default function ProfilePanel(){
     <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
       <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
         <Text style={type.label}>Reading Streak</Text>
-        <TouchableOpacity onPress={()=>logToday()} style={{paddingHorizontal:12,paddingVertical:5,backgroundColor:hasLoggedToday?colors.accentDim:colors.accent,borderWidth:1,borderColor:colors.accent}}>
+        <TouchableOpacity onPress={()=>logToday()} style={{paddingHorizontal:12,paddingVertical:5,backgroundColor:hasLoggedToday?colors.accentDim:colors.accent,borderWidth:1,borderColor:colors.accent,borderRadius:999}}>
           <Text style={{fontFamily:fonts.sansBold,fontSize:11,color:hasLoggedToday?colors.accent:colors.bg}}>{hasLoggedToday?'✓ Logged today':'Log today'}</Text>
         </TouchableOpacity>
       </View>
       <View style={{flexDirection:'row',gap:6,flexWrap:'wrap'}}>
         {['Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8','Jun 9'].map(d=>{const active=streakDays.includes(d);
           return <View key={d} style={{alignItems:'center',gap:3}}>
-            <View style={{width:28,height:28,backgroundColor:active?colors.accent:colors.surface,borderWidth:1,borderColor:active?colors.accent:colors.border}}/>
+            <View style={{width:28,height:28,backgroundColor:active?colors.accent:colors.surface,borderWidth:1,borderColor:active?colors.accent:colors.border,borderRadius:8}}/>
             <Text style={{fontFamily:fonts.sans,fontSize:9,color:colors.text3}}>{d.split(' ')[1]}</Text>
           </View>;})}
       </View>
@@ -54,16 +54,16 @@ export default function ProfilePanel(){
     </View>
     <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
       <Text style={[type.label,{marginBottom:10}]}>Verso thinks you love</Text>
-      <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{TAGS.map(t=><View key={t} style={{paddingHorizontal:10,paddingVertical:5,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>{t}</Text></View>)}</View>
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{TAGS.map(t=><View key={t} style={{paddingHorizontal:10,paddingVertical:5,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,borderRadius:999}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>{t}</Text></View>)}</View>
     </View>
     <View style={{padding:spacing.lg,gap:10}}>
-      <TouchableOpacity style={{backgroundColor:colors.accent,padding:15,alignItems:'center'}} onPress={()=>setShowCompare(true)}>
+      <TouchableOpacity style={{backgroundColor:colors.accent,padding:15,alignItems:'center',borderRadius:999}} onPress={()=>setShowCompare(true)}>
         <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:colors.bg}}>Compare Stats with a Friend →</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,padding:14,alignItems:'center'}} onPress={()=>setShowBookstore(true)}>
+      <TouchableOpacity style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,padding:14,alignItems:'center',borderRadius:12}} onPress={()=>setShowBookstore(true)}>
         <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text}}>Find a Local Bookstore →</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,padding:14,alignItems:'center'}} onPress={()=>setShowIE(true)}>
+      <TouchableOpacity style={{backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,padding:14,alignItems:'center',borderRadius:12}} onPress={()=>setShowIE(true)}>
         <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text}}>Import / Export Data →</Text>
       </TouchableOpacity>
     </View>

@@ -93,10 +93,10 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
         <TouchableOpacity onPress={close} style={{paddingRight:16}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
         <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Add a Book</Text>
       </View>
-      <View style={{flexDirection:'row',borderBottomWidth:1,borderBottomColor:colors.border}}>
+      <View style={{flexDirection:'row',paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
         {(['search','manual'] as const).map(t=><TouchableOpacity key={t} onPress={()=>setTab(t)}
-          style={{flex:1,paddingVertical:11,alignItems:'center',borderBottomWidth:2,borderBottomColor:tab===t?colors.accent:'transparent'}}>
-          <Text style={{fontSize:12,color:tab===t?colors.accent:colors.text3}}>{t==='search'?'Search Open Library':'Add Manually'}</Text>
+          style={{flex:1,paddingVertical:9,alignItems:'center',borderRadius:999,backgroundColor:tab===t?colors.accent:colors.surface}}>
+          <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:tab===t?colors.text:colors.text2}}>{t==='search'?'Search Open Library':'Add Manually'}</Text>
         </TouchableOpacity>)}
       </View>
 
@@ -120,7 +120,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
                 {doc.number_of_pages_median?<Text style={{fontSize:10,color:colors.text3,marginTop:2}}>{doc.number_of_pages_median} pages</Text>:null}
               </View>
               <TouchableOpacity onPress={()=>addOLBook(doc)}
-                style={{paddingHorizontal:14,paddingVertical:8,backgroundColor:isAdded?colors.surface2:colors.accent,borderWidth:1,borderColor:isAdded?colors.border:colors.accent}}>
+                style={{paddingHorizontal:14,paddingVertical:8,backgroundColor:isAdded?colors.surface2:colors.accent,borderWidth:1,borderColor:isAdded?colors.border:colors.accent,borderRadius:999}}>
                 <Text style={{fontSize:12,color:isAdded?colors.text3:colors.bg,fontWeight:'600'}}>{isAdded?'Added':'+ Add'}</Text>
               </TouchableOpacity>
             </View>;
@@ -132,7 +132,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
       </View>}
 
       {tab==='manual'&&<ScrollView style={{flex:1}} contentContainerStyle={{padding:spacing.lg,gap:10}}>
-        {manualDone&&<View style={{backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent,padding:12,marginBottom:8}}>
+        {manualDone&&<View style={{backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent,padding:12,marginBottom:8,borderRadius:12}}>
           <Text style={{fontSize:13,color:colors.accent,textAlign:'center'}}>✓ Book added to your library</Text>
         </View>}
         <Text style={{fontSize:9,letterSpacing:1.8,textTransform:'uppercase',color:colors.text3,fontWeight:'600',marginBottom:4}}>Title *</Text>
@@ -151,7 +151,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
         </View>
         <Text style={{fontSize:9,letterSpacing:1.8,textTransform:'uppercase',color:colors.text3,fontWeight:'600',marginTop:10,marginBottom:4}}>Genre</Text>
         <TextInput style={inp} placeholder="Literary Fiction, etc." placeholderTextColor={colors.text3} value={mGenre} onChangeText={setMGenre}/>
-        <TouchableOpacity style={{backgroundColor:colors.accent,padding:14,alignItems:'center',marginTop:16}} onPress={addManual}>
+        <TouchableOpacity style={{backgroundColor:colors.accent,padding:14,alignItems:'center',marginTop:16,borderRadius:999}} onPress={addManual}>
           <Text style={{color:colors.bg,fontSize:13,fontWeight:'600'}}>Add to Library</Text>
         </TouchableOpacity>
         <View style={{height:40}}/>
@@ -160,4 +160,4 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
   </Modal>;
 }
 
-const inp:any={backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10};
+const inp:any={backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10,borderRadius:12};

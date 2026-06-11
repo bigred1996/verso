@@ -87,14 +87,14 @@ export default function StatsView(){
     {/* Customize header */}
     <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:customize?0:spacing.md}}>
       <Text style={type.label}>Statistics</Text>
-      <TouchableOpacity onPress={()=>setCustomize(c=>!c)} style={{paddingHorizontal:10,paddingVertical:5,borderWidth:1,borderColor:customize?colors.accent:colors.border}}>
+      <TouchableOpacity onPress={()=>setCustomize(c=>!c)} style={{paddingHorizontal:10,paddingVertical:5,borderWidth:1,borderColor:customize?colors.accent:colors.border,borderRadius:999}}>
         <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:customize?colors.accent:colors.text3}}>{customize?'Done':'Customize'}</Text>
       </TouchableOpacity>
     </View>
     {customize&&<View style={[sec,{paddingTop:spacing.md}]}>
       <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginBottom:12}}>Tap a section to show or hide it. Build the stats page you actually want.</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
-        {SECTIONS.map(s=>{const on=show(s.key);return <TouchableOpacity key={s.key} onPress={()=>toggleStat(s.key)} style={{paddingHorizontal:11,paddingVertical:7,backgroundColor:on?colors.accentDim:colors.surface2,borderWidth:1,borderColor:on?colors.accent:colors.border}}>
+        {SECTIONS.map(s=>{const on=show(s.key);return <TouchableOpacity key={s.key} onPress={()=>toggleStat(s.key)} style={{paddingHorizontal:11,paddingVertical:7,backgroundColor:on?colors.accentDim:colors.surface2,borderWidth:1,borderColor:on?colors.accent:colors.border,borderRadius:999}}>
           <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:on?colors.accent:colors.text3}}>{on?'✓ ':''}{s.label}</Text>
         </TouchableOpacity>;})}
       </View>
@@ -111,7 +111,7 @@ export default function StatsView(){
       <Text style={[type.label,{marginBottom:14}]}>Year at a Glance · 2026</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
         {[{v:String(read.length),l:'Books read'},{v:pages>=1000?(pages/1000).toFixed(1)+'k':String(pages),l:'Pages read'},{v:avg+(avg!=='—'?' ★':''),l:'Avg rating'},{v:String(dnf.length),l:"DNF'd"}].map(c=>
-          <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:colors.surface2,padding:14}}>
+          <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:colors.surface2,padding:14,borderRadius:12}}>
             <Text style={{fontFamily:fonts.serifBold,fontSize:25,color:colors.accent}}>{c.v}</Text>
             <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,marginTop:4}}>{c.l}</Text>
           </View>)}
