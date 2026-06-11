@@ -35,10 +35,21 @@ const SECTIONS:{key:string;label:string}[]=[
   {key:'goal',label:'Annual Reading Goal'},
 ];
 
+// Segment groups — keeps the page from being one endless scroll
+const SEGMENTS=['Overview','Reading','Taste'] as const;
+type Seg=typeof SEGMENTS[number];
+const GROUP:Record<string,Seg>={
+  wrap:'Overview',glance:'Overview',streak:'Overview',goal:'Overview',
+  velocity:'Reading',month:'Reading',pace:'Reading',rating:'Reading',
+  mood:'Taste',genre:'Taste',decade:'Taste',tropes:'Taste',profile:'Taste',
+};
+
 export default function StatsView(){
   const {shelf,ratings,customBooks,annualGoal,setAnnualGoal,statsHidden,toggleStat}=useStore();
   const [customize,setCustomize]=useState(false);
+  const [seg,setSeg]=useState<Seg>('Overview');
   const show=(k:string)=>!statsHidden[k];
+  const visible=(k:string)=>!statsHidden[k]&&GROUP[k]===seg;
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const read=all.filter(b=>shelf[b.id]==='read');
   const dnf=all.filter(b=>shelf[b.id]==='dnf');
@@ -101,14 +112,22 @@ export default function StatsView(){
       </View>
     </View>}
 
+    {/* Segmented control */}
+    {!customize&&<View style={{flexDirection:'row',gap:8,paddingHorizontal:spacing.lg,paddingTop:spacing.sm,paddingBottom:spacing.xs}}>
+      {SEGMENTS.map(g=>{const on=seg===g;
+        return <TouchableOpacity key={g} onPress={()=>setSeg(g)} style={{flex:1,paddingVertical:9,borderRadius:radius.pill,backgroundColor:on?colors.accent:colors.surface,borderWidth:1,borderColor:on?colors.accent:colors.border,alignItems:'center'}}>
+          <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:on?colors.accentText:colors.text2}}>{g}</Text>
+        </TouchableOpacity>;})}
+    </View>}
+
     {/* Wrap-up card */}
-    {show('wrap')&&<View style={[sec,{backgroundColor:pastels.sage}]}>
+    {visible('wrap')&&<View style={[sec,{backgroundColor:pastels.sage}]}>
       <Text style={[type.label,{marginBottom:10,color:pastelText.sage,opacity:0.8}]}>Your 2026, So Far</Text>
       <Text style={{fontFamily:fonts.serif,fontSize:15,color:'#2C3A2D',lineHeight:24}}>{wrap}</Text>
     </View>}
 
     {/* Year at a glance */}
-    {show('glance')&&<View style={sec}>
+    {visible('glance')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Year at a Glance · 2026</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
         {[{v:String(read.length),l:'Books read'},{v:pages>=1000?(pages/1000).toFixed(1)+'k':String(pages),l:'Pages read'},{v:avg+(avg!=='—'?' ★':''),l:'Avg rating'},{v:String(dnf.length),l:"DNF'd"}].map((c,i)=>{const t=STAT_TINTS[i%STAT_TINTS.length];
@@ -121,7 +140,7 @@ export default function StatsView(){
     </View>}
 
     {/* Reading velocity sparkline */}
-    {show('velocity')&&<View style={sec}>
+    {visible('velocity')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Reading Velocity</Text>
       <Svg width="100%" height={44} viewBox="0 0 240 44">
         <Polyline points={spark} fill="none" stroke={colors.accent} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
@@ -130,7 +149,7 @@ export default function StatsView(){
     </View>}
 
     {/* Pace donut */}
-    {show('pace')&&<View style={sec}>
+    {visible('pace')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Pace Breakdown</Text>
       <View style={{flexDirection:'row',alignItems:'center',gap:20}}>
         <Svg width={120} height={120} viewBox="0 0 120 120">
@@ -152,27 +171,27 @@ export default function StatsView(){
     </View>}
 
     {/* Mood */}
-    {show('mood')&&<View style={sec}>
+    {visible('mood')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Mood Breakdown</Text>
       <Bars rows={[{l:'emotional',p:68},{l:'dark',p:52},{l:'reflective',p:47},{l:'tense',p:29},{l:'sad',p:24},{l:'mysterious',p:18},{l:'funny',p:12}]}/>
       <Text style={quote}>"You have a type. It's called feelings."</Text>
     </View>}
 
     {/* Genre */}
-    {show('genre')&&<View style={sec}>
+    {visible('genre')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Genre Breakdown</Text>
       <Bars labelWidth={110} rows={[{l:'Literary Fiction',p:72},{l:'Contemporary',p:33},{l:'Historical',p:21},{l:'Translated',p:17},{l:'Short Stories',p:8}]}/>
     </View>}
 
     {/* Rating distribution (live) */}
-    {show('rating')&&<View style={sec}>
+    {visible('rating')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>How You Rate</Text>
       <Bars labelWidth={28} rows={ratingCounts.map(d=>({l:d.s+'★',p:Math.round(d.n/maxR*100),v:String(d.n)}))}/>
       <Text style={quote}>"Mostly 4s and 5s. Either discerning, or you DNF the ones you'd hate."</Text>
     </View>}
 
     {/* Books by month */}
-    {show('month')&&<View style={sec}>
+    {visible('month')&&<View style={sec}>
       <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'baseline',marginBottom:14}}>
         <Text style={type.label}>Books by Month</Text>
         <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accent}}>2026</Text>
@@ -187,7 +206,7 @@ export default function StatsView(){
     </View>}
 
     {/* Decades */}
-    {show('decade')&&<View style={sec}>
+    {visible('decade')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>When Were They Written?</Text>
       {decades.map(d=><View key={d.d} style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:8}}>
         <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,width:48}}>{d.d}</Text>
@@ -198,7 +217,7 @@ export default function StatsView(){
     </View>}
 
     {/* Reading streak grid */}
-    {show('streak')&&<View style={sec}>
+    {visible('streak')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Reading Streak · 12 weeks</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:3,maxWidth:7*16}}>
         {base.map((v,i)=><View key={i} style={{width:13,height:13,backgroundColor:v?colors.accent:colors.surface2,opacity:v?1:1}}/>)}
@@ -207,7 +226,7 @@ export default function StatsView(){
     </View>}
 
     {/* Tropes cloud */}
-    {show('tropes')&&tropes.length>0&&<View style={sec}>
+    {visible('tropes')&&tropes.length>0&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Your Tropes</Text>
       <View style={{flexDirection:'row',flexWrap:'wrap',gap:7}}>
         {tropes.map(([t,n])=><View key={t} style={{paddingHorizontal:10,paddingVertical:5,backgroundColor:n>=3?colors.accentDim:colors.surface2,borderWidth:1,borderColor:n>=3?'rgba(61,107,72,0.4)':colors.border}}>
@@ -218,7 +237,7 @@ export default function StatsView(){
     </View>}
 
     {/* Reader profile */}
-    {show('profile')&&<View style={sec}>
+    {visible('profile')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Your Reader Profile</Text>
       <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24,marginBottom:10}}>You gravitate toward <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>slow-burn literary fiction</Text> with emotionally devastating payoffs. You have a high tolerance for <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>unreliable narrators</Text> and an unusual appetite for books that make you feel worse about everything.</Text>
       <Text style={{fontFamily:fonts.sans,fontSize:14,color:colors.text2,lineHeight:24}}>Your comfort zone: <Text style={{color:colors.text,fontFamily:fonts.sansMedium}}>Ireland, New York, and anywhere with repressed feelings</Text>. You read for prose over plot, and you have never once picked up a thriller.</Text>
@@ -228,7 +247,7 @@ export default function StatsView(){
     </View>}
 
     {/* Goal ring */}
-    {show('goal')&&<View style={[sec,{borderBottomWidth:0,alignItems:'center'}]}>
+    {visible('goal')&&<View style={[sec,{borderBottomWidth:0,alignItems:'center'}]}>
       <Text style={[type.label,{marginBottom:14,alignSelf:'flex-start'}]}>Annual Reading Goal</Text>
       <Svg width={140} height={140} viewBox="0 0 140 140">
         <Circle cx={70} cy={70} r={GR} fill="none" stroke={colors.surface2} strokeWidth={9}/>

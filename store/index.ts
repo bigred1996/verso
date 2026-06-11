@@ -70,7 +70,7 @@ export const useStore = create<State>()(persist((set)=>({
   ratings:{stoner:4.5}, formats:{}, rereads:{},
   journal:{'remains-of-the-day':{page:184,entries:[{date:'Jun 6',page:48,note:"Stevens is already insufferable."},{date:'Jun 7',page:112,note:"The repression is doing something to me."},{date:'Jun 8',page:184,note:"I am not okay."}]}},
   userTags:{}, customBooks:[], follows:{}, challengeJoined:{'literary-dozen':true},
-  swipeData:{}, eloRatings:{}, streakDays:[], clubMessages:{}, reviews:{},
+  swipeData:{}, eloRatings:{}, streakDays:['May 28','May 29','May 30','Jun 1','Jun 2','Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8'], clubMessages:{}, reviews:{},
   buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
   favorites:['stoner','remains-of-the-day','pachinko'],
   dnfReasons:{}, annualGoal:30, authorFollows:{'Sally Rooney':true,'Kazuo Ishiguro':true}, bookMoods:{},
