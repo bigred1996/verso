@@ -22,7 +22,7 @@ export default function FriendProfileModal({friendId,onClose,onOpenBook}:Props){
 
   return <Modal visible={!!friendId} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-      <StatusBar barStyle="light-content"/>
+      <StatusBar barStyle="dark-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={onClose} style={{paddingRight:16,paddingVertical:4}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
         <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:15,color:colors.text}}>{f.name}</Text>

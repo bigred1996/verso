@@ -1,7 +1,8 @@
 import React,{useState} from 'react';
-import {ScrollView,View,Text,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
+import {ScrollView,View,Text,TouchableOpacity,StatusBar} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useRouter} from 'expo-router';
-import {colors,spacing,fonts,type} from '../../constants/theme';
+import {colors,spacing,fonts,type,radius,shadow} from '../../constants/theme';
 import {BOOKS,FRIENDS,CHALLENGES,ACTIVITY,AUTHOR_DATA} from '../../data/books';
 import {TextInput} from 'react-native';
 import {useStore} from '../../store';
@@ -18,6 +19,7 @@ type Sub=typeof SUBS[number];
 const fr=(id:string)=>FRIENDS.find(f=>f.id===id);
 
 export default function SocialScreen(){
+  const insets=useSafeAreaInsets();
   const router=useRouter();
   const {buddyReads,authorFollows,toggleAuthorFollow,customBooks,shelf,userClubs,userChallenges,createClub,createChallenge}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
@@ -48,17 +50,20 @@ export default function SocialScreen(){
     }
   }
 
-  return <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-    <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
-    <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}>
-      <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Social</Text>
-      <TouchableOpacity onPress={()=>router.push('/profile')} style={{width:34,height:34,borderRadius:17,backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent,alignItems:'center',justifyContent:'center'}}>
-        <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.accent}}>C</Text>
+  return <View style={{flex:1,backgroundColor:colors.bg,paddingTop:insets.top}}>
+    <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
+    <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:4,flexDirection:'row',justifyContent:'space-between',alignItems:'flex-end'}}>
+      <View>
+        <Text style={[type.label,{marginBottom:2}]}>Community</Text>
+        <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text}}>Social</Text>
+      </View>
+      <TouchableOpacity onPress={()=>router.push('/profile')} style={{width:40,height:40,borderRadius:20,backgroundColor:colors.accent,alignItems:'center',justifyContent:'center',...shadow.soft}}>
+        <Text style={{fontFamily:fonts.serifBold,fontSize:17,color:colors.accentText}}>C</Text>
       </TouchableOpacity>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0}} contentContainerStyle={{paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
-      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:16,paddingVertical:7,borderRadius:999,backgroundColor:sub===s?colors.accent:colors.surface2,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
-        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.text:colors.text2}}>{s}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,height:60}} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:8,alignItems:'center'}}>
+      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:radius.pill,backgroundColor:sub===s?colors.accent:colors.surface,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.accentText:colors.text2}}>{s}</Text>
       </TouchableOpacity>)}
     </ScrollView>
 
@@ -192,7 +197,7 @@ export default function SocialScreen(){
     <AuthorModal author={authorOpen} onClose={()=>setAuthorOpen(null)} onOpenBook={id=>{setAuthorOpen(null);setDetailId(id);}}/>
     {showCompare&&<CompareModal visible onClose={()=>setShowCompare(false)}/>}
     <FriendProfileModal friendId={friendOpen} onClose={()=>setFriendOpen(null)} onOpenBook={id=>{setFriendOpen(null);setDetailId(id);}}/>
-  </SafeAreaView>;
+  </View>;
 }
 const fline:any={fontFamily:fonts.sans,fontSize:13,color:colors.text2,lineHeight:19};
 const fb:any={fontFamily:fonts.sansMedium,color:colors.text};

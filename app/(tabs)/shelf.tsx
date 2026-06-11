@@ -1,6 +1,7 @@
 import React,{useState} from 'react';
-import {View,Text,ScrollView,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
-import {colors,spacing,fonts,type} from '../../constants/theme';
+import {View,Text,ScrollView,TouchableOpacity,StatusBar} from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {colors,spacing,fonts,type,radius,shadow} from '../../constants/theme';
 import {BOOKS,PAGE_COUNTS} from '../../data/books';
 import {useStore} from '../../store';
 import BookCover from '../../components/BookCover';
@@ -15,6 +16,7 @@ const SHELF_TABS=[{k:'read',l:'Read'},{k:'reading',l:'Reading'},{k:'want',l:'TBR
 const SORTS=['Date','Title','Author','Rating'] as const;
 
 export default function ShelfScreen(){
+  const insets=useSafeAreaInsets();
   const [sub,setSub]=useState<Sub>('Stats');
   const [shelfTab,setShelfTab]=useState<'read'|'reading'|'want'|'dnf'>('read');
   const [sort,setSort]=useState<typeof SORTS[number]>('Date');
@@ -105,14 +107,15 @@ export default function ShelfScreen(){
 
   const list=sorted(all.filter(b=>shelf[b.id]===shelfTab));
 
-  return <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-    <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
-    <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10}}>
-      <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Shelf</Text>
+  return <View style={{flex:1,backgroundColor:colors.bg,paddingTop:insets.top}}>
+    <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
+    <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:4}}>
+      <Text style={[type.label,{marginBottom:2}]}>Your library</Text>
+      <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text}}>Shelf</Text>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0}} contentContainerStyle={{paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
-      {SUBS.map(t=><TouchableOpacity key={t} onPress={()=>setSub(t)} style={{paddingHorizontal:16,paddingVertical:8,borderRadius:999,backgroundColor:sub===t?colors.accent:colors.surface2,borderWidth:1,borderColor:sub===t?colors.accent:colors.border}}>
-        <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:sub===t?colors.text:colors.text2}}>{t}</Text>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,height:60}} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:8,alignItems:'center'}}>
+      {SUBS.map(t=><TouchableOpacity key={t} onPress={()=>setSub(t)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:radius.pill,backgroundColor:sub===t?colors.accent:colors.surface,borderWidth:1,borderColor:sub===t?colors.accent:colors.border}}>
+        <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:sub===t?colors.accentText:colors.text2}}>{t}</Text>
       </TouchableOpacity>)}
     </ScrollView>
 
@@ -127,8 +130,8 @@ export default function ShelfScreen(){
         {/* shelf switcher + sort */}
         <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingTop:12}}>
           <View style={{flexDirection:'row',gap:8}}>
-            {SHELF_TABS.map(t=><TouchableOpacity key={t.k} onPress={()=>setShelfTab(t.k)} style={{paddingHorizontal:11,paddingVertical:6,backgroundColor:shelfTab===t.k?colors.accentDim:colors.surface,borderWidth:1,borderColor:shelfTab===t.k?colors.accent:colors.border,borderRadius:999}}>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:shelfTab===t.k?colors.accent:colors.text3}}>{t.l}</Text>
+            {SHELF_TABS.map(t=><TouchableOpacity key={t.k} onPress={()=>setShelfTab(t.k)} style={{paddingHorizontal:13,paddingVertical:7,backgroundColor:shelfTab===t.k?colors.accentDim:colors.surface,borderWidth:1,borderColor:shelfTab===t.k?colors.accent:colors.border,borderRadius:999}}>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:shelfTab===t.k?colors.accent:colors.text2}}>{t.l}</Text>
             </TouchableOpacity>)}
           </View>
           <TouchableOpacity onPress={()=>setSort(SORTS[(SORTS.indexOf(sort)+1)%SORTS.length])}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Sort: <Text style={{color:colors.accent}}>{sort}</Text></Text></TouchableOpacity>
@@ -140,6 +143,6 @@ export default function ShelfScreen(){
       <View style={{height:32}}/>
     </ScrollView>
     <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
-  </SafeAreaView>;
+  </View>;
 }
-const s={item:{flexDirection:'row' as const,padding:spacing.lg,backgroundColor:colors.surface,borderRadius:16,marginHorizontal:spacing.lg,marginBottom:8,gap:12},title:{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3},author:{fontFamily:fonts.sans,fontSize:12,color:colors.text3}};
+const s={item:{flexDirection:'row' as const,padding:14,backgroundColor:colors.surface,borderRadius:radius.lg,marginHorizontal:spacing.lg,marginBottom:10,gap:14,...shadow.soft},title:{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3},author:{fontFamily:fonts.sans,fontSize:12,color:colors.text3}};

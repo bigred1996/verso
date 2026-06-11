@@ -48,7 +48,7 @@ export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}
 
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={()=>{setActiveClub(null);onClose();}}>
     <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-      <StatusBar barStyle="light-content"/>
+      <StatusBar barStyle="dark-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={()=>{if(activeClub)setActiveClub(null);else onClose();}} style={{paddingRight:16}}>
           <Text style={{fontSize:22,color:colors.text3}}>{activeClub?'←':'←'}</Text>

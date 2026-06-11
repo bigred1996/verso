@@ -96,7 +96,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
 
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
     <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-      <StatusBar barStyle="light-content"/>
+      <StatusBar barStyle="dark-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={onClose} style={{paddingRight:16}}>
           <Text style={{fontSize:22,color:colors.text3}}>←</Text>

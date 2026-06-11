@@ -88,7 +88,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
 
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
     <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-      <StatusBar barStyle="light-content"/>
+      <StatusBar barStyle="dark-content"/>
       <View style={{flexDirection:'row',alignItems:'center',paddingHorizontal:spacing.lg,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
         <TouchableOpacity onPress={close} style={{paddingRight:16}}><Text style={{fontSize:22,color:colors.text3}}>←</Text></TouchableOpacity>
         <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Add a Book</Text>

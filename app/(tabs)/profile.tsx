@@ -5,7 +5,7 @@ import ProfilePanel from '../../components/ProfilePanel';
 
 export default function ProfileScreen(){
   return <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-    <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
+    <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10}}>
       <Text style={{fontFamily:fonts.serifItalic,fontSize:24,color:colors.text}}>Profile</Text>
     </View>

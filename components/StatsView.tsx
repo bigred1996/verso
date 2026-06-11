@@ -1,14 +1,15 @@
 import React,{useState} from 'react';
 import {View,Text,TouchableOpacity} from 'react-native';
 import Svg,{Circle,Polyline,Text as SvgText} from 'react-native-svg';
-import {colors,spacing,fonts,type} from '../constants/theme';
+import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../constants/theme';
 import {BOOKS,PAGE_COUNTS,BOOK_TAGS,FRIENDS} from '../data/books';
 import {useStore} from '../store';
 
 const COMMUNITY_AVG=4.1;
 
-const sec={padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border};
-const quote:any={fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3,lineHeight:18,marginTop:10,paddingLeft:10,borderLeftWidth:2,borderLeftColor:colors.text3};
+const sec:any={padding:spacing.lg,backgroundColor:colors.surface,borderRadius:radius.lg,marginHorizontal:spacing.lg,marginBottom:12,...shadow.soft};
+const quote:any={fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3,lineHeight:18,marginTop:10,paddingLeft:10,borderLeftWidth:2,borderLeftColor:colors.accent};
+const STAT_TINTS=[{bg:pastels.sage,fg:pastelText.sage},{bg:pastels.sky,fg:pastelText.sky},{bg:pastels.butter,fg:pastelText.butter},{bg:pastels.blush,fg:pastelText.blush}];
 
 function Bars({rows,labelWidth=90}:{rows:{l:string;p:number;v?:string}[];labelWidth?:number}){
   return <View>{rows.map(d=><View key={d.l} style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:7}}>
@@ -101,20 +102,20 @@ export default function StatsView(){
     </View>}
 
     {/* Wrap-up card */}
-    {show('wrap')&&<View style={[sec,{backgroundColor:colors.surface}]}>
-      <Text style={[type.label,{marginBottom:10}]}>Your 2026, So Far</Text>
-      <Text style={{fontFamily:fonts.serif,fontSize:15,color:colors.text,lineHeight:24}}>{wrap}</Text>
+    {show('wrap')&&<View style={[sec,{backgroundColor:pastels.sage}]}>
+      <Text style={[type.label,{marginBottom:10,color:pastelText.sage,opacity:0.8}]}>Your 2026, So Far</Text>
+      <Text style={{fontFamily:fonts.serif,fontSize:15,color:'#2C3A2D',lineHeight:24}}>{wrap}</Text>
     </View>}
 
     {/* Year at a glance */}
     {show('glance')&&<View style={sec}>
       <Text style={[type.label,{marginBottom:14}]}>Year at a Glance · 2026</Text>
-      <View style={{flexDirection:'row',flexWrap:'wrap',gap:9}}>
-        {[{v:String(read.length),l:'Books read'},{v:pages>=1000?(pages/1000).toFixed(1)+'k':String(pages),l:'Pages read'},{v:avg+(avg!=='—'?' ★':''),l:'Avg rating'},{v:String(dnf.length),l:"DNF'd"}].map(c=>
-          <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:colors.surface2,padding:14,borderRadius:12}}>
-            <Text style={{fontFamily:fonts.serifBold,fontSize:25,color:colors.accent}}>{c.v}</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,marginTop:4}}>{c.l}</Text>
-          </View>)}
+      <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
+        {[{v:String(read.length),l:'Books read'},{v:pages>=1000?(pages/1000).toFixed(1)+'k':String(pages),l:'Pages read'},{v:avg+(avg!=='—'?' ★':''),l:'Avg rating'},{v:String(dnf.length),l:"DNF'd"}].map((c,i)=>{const t=STAT_TINTS[i%STAT_TINTS.length];
+          return <View key={c.l} style={{width:'47%',flexGrow:1,backgroundColor:t.bg,padding:16,borderRadius:radius.md}}>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:26,color:t.fg}}>{c.v}</Text>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:t.fg,opacity:0.75,marginTop:4}}>{c.l}</Text>
+          </View>;})}
       </View>
       {avg!=='—'&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:12}}>Your {avg}★ average is {avgNum>=COMMUNITY_AVG?'above':'below'} the Verso community's {COMMUNITY_AVG}★ — {avgNum>=COMMUNITY_AVG?'a soft touch':'a hard marker'}.</Text>}
     </View>}

@@ -16,7 +16,7 @@ export default function SearchScreen(){
   const results=q.trim()?all.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase())):all;
 
   return <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
-    <StatusBar barStyle="light-content" backgroundColor={colors.bg}/>
+    <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
     <View style={{padding:spacing.lg,paddingBottom:8,flexDirection:'row',gap:8}}>
       <TextInput style={{flex:1,fontFamily:fonts.sans,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:14,paddingHorizontal:14,paddingVertical:11}} placeholder="Search by title or author…" placeholderTextColor={colors.text3} value={q} onChangeText={setQ} autoCorrect={false} autoCapitalize="none"/>
       <TouchableOpacity onPress={()=>setShowAdd(true)} style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,paddingHorizontal:14,justifyContent:'center'}}>
