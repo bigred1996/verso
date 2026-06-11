@@ -1,6 +1,6 @@
 import React,{useState} from 'react';
 import {View,Text,TouchableOpacity} from 'react-native';
-import {colors,spacing,fonts,type} from '../constants/theme';
+import {colors,spacing,fonts,type,radius,shadow} from '../constants/theme';
 import {BOOKS,FRIENDS,PAGE_COUNTS} from '../data/books';
 import {useStore} from '../store';
 import CompareModal from './CompareModal';

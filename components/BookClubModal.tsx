@@ -1,6 +1,6 @@
 import React,{useState,useRef,useEffect} from 'react';
 import {Modal,View,Text,TouchableOpacity,ScrollView,TextInput,KeyboardAvoidingView,Platform,SafeAreaView,StatusBar} from 'react-native';
-import {colors,spacing,fonts} from '../constants/theme';
+import {colors,spacing,fonts,radius,shadow} from '../constants/theme';
 import {BOOKS} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
@@ -63,7 +63,7 @@ export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}
           const myProg=c.progress.You||0;
           const pct=Math.round(myProg/c.goal*100);
           return <TouchableOpacity key={c.id} onPress={()=>setActiveClub(c.id)}
-            style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:spacing.lg}}>
+            style={{backgroundColor:colors.surface,borderRadius:radius.lg,padding:spacing.lg,...shadow.soft}}>
             <View style={{flexDirection:'row',gap:12,marginBottom:12}}>
               {b&&<BookCover bookId={b.id} size="sm"/>}
               <View style={{flex:1}}>
@@ -81,8 +81,8 @@ export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}
                   <Text style={{fontSize:10,color:isYou?colors.text:colors.text3}}>{user}</Text>
                   <Text style={{fontSize:10,color:colors.text3}}>p.{pg} · {p}%</Text>
                 </View>
-                <View style={{height:3,backgroundColor:colors.surface2,overflow:'hidden'}}>
-                  <View style={{width:`${p}%`,height:3,backgroundColor:isYou?colors.accent:'#7B9EA6'}}/>
+                <View style={{height:5,borderRadius:radius.pill,backgroundColor:colors.surface2,overflow:'hidden'}}>
+                  <View style={{width:`${p}%`,height:5,borderRadius:radius.pill,backgroundColor:isYou?colors.accent:'#7B9EA6'}}/>
                 </View>
               </View>;
             })}
@@ -108,14 +108,14 @@ export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}
             const locked=!isYou&&typeof m.page==='number'&&m.page>myPage;
             if(locked) return <View key={i} style={{alignItems:'flex-start',marginBottom:8}}>
               <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginBottom:3}}>{m.user} · {m.ts}</Text>
-              <View style={{maxWidth:'78%',padding:10,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderStyle:'dashed'}}>
+              <View style={{maxWidth:'78%',padding:12,borderRadius:radius.lg,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,borderStyle:'dashed'}}>
                 <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:12,color:colors.text3}}>Hidden until p.{m.page} — no spoilers.</Text>
               </View>
             </View>;
             return <View key={i} style={{alignItems:isYou?'flex-end':'flex-start',marginBottom:8}}>
               {!isYou&&<Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginBottom:3}}>{m.user} · {m.ts}</Text>}
-              <View style={{maxWidth:'78%',padding:10,backgroundColor:isYou?colors.accentDim:colors.surface,borderWidth:1,borderColor:isYou?colors.accent:colors.border}}>
-                <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text,lineHeight:18}}>{m.text}</Text>
+              <View style={{maxWidth:'78%',padding:12,backgroundColor:isYou?colors.accent:colors.surface,borderRadius:radius.lg,borderBottomRightRadius:isYou?4:radius.lg,borderBottomLeftRadius:isYou?radius.lg:4,...shadow.soft}}>
+                <Text style={{fontFamily:fonts.sans,fontSize:13,color:isYou?colors.accentText:colors.text,lineHeight:18}}>{m.text}</Text>
               </View>
               {isYou&&<Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:3}}>{m.ts}</Text>}
             </View>;
@@ -123,11 +123,11 @@ export default function BookClubModal({visible,onClose,onOpenBook,initialClubId}
           <View style={{height:20}}/>
         </ScrollView>
         {/* Input */}
-        <View style={{flexDirection:'row',padding:spacing.md,gap:8,borderTopWidth:1,borderTopColor:colors.border}}>
-          <TextInput style={{flex:1,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:12,paddingVertical:10}}
+        <View style={{flexDirection:'row',padding:spacing.md,gap:8,borderTopWidth:1,borderTopColor:colors.border,alignItems:'center'}}>
+          <TextInput style={{flex:1,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,color:colors.text,fontSize:13,paddingHorizontal:16,paddingVertical:11,borderRadius:radius.pill}}
             placeholder="Message…" placeholderTextColor={colors.text3} value={msg} onChangeText={setMsg} returnKeyType="send" onSubmitEditing={send}/>
-          <TouchableOpacity onPress={send} style={{backgroundColor:colors.accent,paddingHorizontal:16,justifyContent:'center'}}>
-            <Text style={{color:colors.bg,fontWeight:'600',fontSize:14}}>↑</Text>
+          <TouchableOpacity onPress={send} style={{backgroundColor:colors.accent,width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center'}}>
+            <Text style={{color:colors.accentText,fontWeight:'600',fontSize:18}}>↑</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>}

@@ -1,7 +1,7 @@
 import React,{useState,useEffect} from 'react';
 import {Modal,View,Text,ScrollView,TouchableOpacity,TextInput,SafeAreaView,StatusBar,Platform,Share} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import {colors,spacing,fonts,type} from '../constants/theme';
+import {colors,spacing,fonts,type,radius,shadow} from '../constants/theme';
 import {BOOKS,PAGE_COUNTS,AUTHOR_DATA,BOOK_TAGS,FRIEND_BOOK,FRIENDS,BOOK_VIBES} from '../data/books';
 import type {ShelfStatus,Format} from '../data/books';
 import {useStore,MOODS,PACES,DNF_REASONS} from '../store';
@@ -85,13 +85,13 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const hasAuthorPage=!!AUTHOR_DATA[book.author]||all.filter(b=>b.author===book.author).length>1;
   const TODAY_LABEL=()=>{const d=new Date(2026,5,9);return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getDate();};
 
-  function Star({n,value,onPress}:{n:number;value:number;onPress:(v:number)=>void}){
+  function Star({n,value,onPress,size=30}:{n:number;value:number;onPress:(v:number)=>void;size?:number}){
     const fill=value>=n?1:value>=n-0.5?0.5:0;
-    return <TouchableOpacity onPress={()=>onPress(value===n?n-0.5:value===n-0.5?0:n)} style={{padding:3}}>
+    return <TouchableOpacity onPress={()=>onPress(value===n?n-0.5:value===n-0.5?0:n)} style={{padding:2}}>
       <View>
-        <Text style={{fontSize:30,color:colors.text3}}>★</Text>
+        <Text style={{fontSize:size,color:colors.text3}}>★</Text>
         {fill>0&&<View style={{position:'absolute',overflow:'hidden',width:fill===1?'100%':'50%'}}>
-          <Text style={{fontSize:30,color:colors.accent}}>★</Text>
+          <Text style={{fontSize:size,color:colors.accent}}>★</Text>
         </View>}
       </View>
     </TouchableOpacity>;
@@ -149,23 +149,30 @@ export default function BookDetailModal({bookId,onClose}:Props){
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero */}
-        <View style={{flexDirection:'row',padding:spacing.lg,gap:16,borderBottomWidth:1,borderBottomColor:colors.border}}>
-          <BookCover bookId={bid} size="md"/>
-          <View style={{flex:1,justifyContent:'center'}}>
-            <Text style={{fontFamily:fonts.serifBold,fontSize:20,color:colors.text,lineHeight:26,marginBottom:4}}>{book.title}</Text>
-            <TouchableOpacity disabled={!hasAuthorPage} onPress={()=>setAuthorOpen(book.author)}>
-              <Text style={{fontFamily:fonts.sans,fontSize:13,color:hasAuthorPage?colors.accent:colors.text3,marginBottom:8}}>
-                {book.author}{book.year?` · ${book.year}`:''}{hasAuthorPage?'  ›':''}
-              </Text>
-            </TouchableOpacity>
-            <View style={{flexDirection:'row',flexWrap:'wrap',gap:5,marginBottom:8}}>
-              {book.genres.map(g=><View key={g} style={pill}><Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{g}</Text></View>)}
+        <View style={{margin:spacing.lg,marginBottom:spacing.sm,backgroundColor:colors.surface,borderRadius:radius.lg,padding:spacing.lg,...shadow.soft}}>
+          <View style={{flexDirection:'row',gap:16}}>
+            <BookCover bookId={bid} size="md"/>
+            <View style={{flex:1,justifyContent:'center'}}>
+              <Text style={{fontFamily:fonts.serifBold,fontSize:20,color:colors.text,lineHeight:26,marginBottom:4}}>{book.title}</Text>
+              <TouchableOpacity disabled={!hasAuthorPage} onPress={()=>setAuthorOpen(book.author)}>
+                <Text style={{fontFamily:fonts.sans,fontSize:13,color:hasAuthorPage?colors.accent:colors.text3,marginBottom:8}}>
+                  {book.author}{book.year?` · ${book.year}`:''}{hasAuthorPage?'  ›':''}
+                </Text>
+              </TouchableOpacity>
+              <View style={{flexDirection:'row',flexWrap:'wrap',gap:5,marginBottom:8}}>
+                {book.genres.map(g=><View key={g} style={pill}><Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{g}</Text></View>)}
+              </View>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>{book.readers>0?`★ ${book.avgRating} · ${book.readers.toLocaleString()} readers · `:''}{total} pages</Text>
+              <TouchableOpacity onPress={()=>toggleFavorite(bid)} style={{marginTop:8,flexDirection:'row',alignItems:'center',gap:5}}>
+                <Text style={{fontSize:14,color:isFav?colors.accent:colors.text3}}>{isFav?'♥':'♡'}</Text>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:isFav?colors.accent:colors.text3}}>{isFav?'Favourite':'Add to Favourites'}</Text>
+              </TouchableOpacity>
             </View>
-            {book.readers>0&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>★ {book.avgRating} · {book.readers.toLocaleString()} readers</Text>}
-            <TouchableOpacity onPress={()=>toggleFavorite(bid)} style={{marginTop:8,flexDirection:'row',alignItems:'center',gap:5}}>
-              <Text style={{fontSize:14,color:isFav?colors.accent:colors.text3}}>{isFav?'♥':'♡'}</Text>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:isFav?colors.accent:colors.text3}}>{isFav?'Favourite':'Add to Favourites'}</Text>
-            </TouchableOpacity>
+          </View>
+          {/* Rating — right next to the book */}
+          <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:14,paddingTop:14,borderTopWidth:1,borderTopColor:colors.border}}>
+            <Text style={[type.label]}>Your rating{rat?` · ${rat}★`:''}</Text>
+            <View style={{flexDirection:'row'}}>{[1,2,3,4,5].map(s=><Star key={s} n={s} value={rat||0} size={24} onPress={v=>setRating(bid,v)}/>)}</View>
           </View>
         </View>
 
@@ -203,30 +210,23 @@ export default function BookDetailModal({bookId,onClose}:Props){
           </View>
         </View>
 
-        {/* Rating */}
-        <View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
-          <Text style={[type.label,{marginBottom:10}]}>Your Rating{rat?` · ${rat} ★`:''}</Text>
-          <View style={{flexDirection:'row'}}>{[1,2,3,4,5].map(s=><Star key={s} n={s} value={rat||0} onPress={v=>setRating(bid,v)}/>)}</View>
-          <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:4}}>tap a star twice for half</Text>
-
-          {/* How did it feel? — adds to the community tally */}
-          {!!rat&&<View style={{marginTop:spacing.lg,paddingTop:spacing.lg,borderTopWidth:1,borderTopColor:colors.border}}>
-            <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3}}>How did it feel?</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginBottom:10}}>Pick up to 3 moods + a pace. Your input shapes the community vibe.</Text>
-            <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10}}>
-              {MOODS.map(m=><TouchableOpacity key={m} onPress={()=>toggleFeel(m)} style={[chip,feelMoods.includes(m)&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
-                <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelMoods.includes(m)?colors.accent:colors.text3}}>{m}</Text>
-              </TouchableOpacity>)}
-            </View>
-            <View style={{flexDirection:'row',gap:6,marginBottom:12}}>
-              {PACES.map(p=><TouchableOpacity key={p} onPress={()=>setFeelPace(feelPace===p?null:p)} style={[chip,feelPace===p&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
-                <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelPace===p?colors.accent:colors.text3}}>{p}</Text>
-              </TouchableOpacity>)}
-            </View>
-            <TouchableOpacity style={btn} onPress={saveFeel}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.bg}}>Add to the tally</Text></TouchableOpacity>
-            {bookMoods[bid]&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent,marginTop:8,textAlign:'center'}}>Logged: {bookMoods[bid].moods.join(', ')||'—'}{bookMoods[bid].pace?` · ${bookMoods[bid].pace}`:''}</Text>}
-          </View>}
-        </View>
+        {/* How did it feel? — only once rated */}
+        {!!rat&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
+          <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3}}>How did it feel?</Text>
+          <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginBottom:10}}>Pick up to 3 moods + a pace. Your input shapes the community vibe.</Text>
+          <View style={{flexDirection:'row',flexWrap:'wrap',gap:6,marginBottom:10}}>
+            {MOODS.map(m=><TouchableOpacity key={m} onPress={()=>toggleFeel(m)} style={[chip,feelMoods.includes(m)&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelMoods.includes(m)?colors.accent:colors.text3}}>{m}</Text>
+            </TouchableOpacity>)}
+          </View>
+          <View style={{flexDirection:'row',gap:6,marginBottom:12}}>
+            {PACES.map(p=><TouchableOpacity key={p} onPress={()=>setFeelPace(feelPace===p?null:p)} style={[chip,feelPace===p&&activeChip,{paddingHorizontal:11,paddingVertical:6}]}>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:feelPace===p?colors.accent:colors.text3}}>{p}</Text>
+            </TouchableOpacity>)}
+          </View>
+          <TouchableOpacity style={btn} onPress={saveFeel}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.accentText}}>Add to the tally</Text></TouchableOpacity>
+          {bookMoods[bid]&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent,marginTop:8,textAlign:'center'}}>Logged: {bookMoods[bid].moods.join(', ')||'—'}{bookMoods[bid].pace?` · ${bookMoods[bid].pace}`:''}</Text>}
+        </View>}
 
         {/* DNF reason */}
         {sh==='dnf'&&<View style={{padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border}}>
@@ -378,11 +378,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
               {meta.cw.map(c=><View key={c} style={{paddingHorizontal:9,paddingVertical:4,borderWidth:1,borderColor:'rgba(166,90,90,0.4)',borderRadius:6}}><Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B'}}>{c}</Text></View>)}
             </View>
           </View>}
-          <View style={{padding:spacing.lg}}>
-            <Text style={[type.label,{marginBottom:10}]}>Book Info</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2,marginBottom:4}}>{total} pages</Text>
-            {fmt&&<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2}}>You read: {FORMAT_OPTS.find(f=>f.k===fmt)?.l}</Text>}
-          </View>
+          <View style={{height:spacing.sm}}/>
         </View>}
 
         {/* REVIEW */}

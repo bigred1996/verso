@@ -1,6 +1,6 @@
 import React from 'react';
 import {Modal,View,Text,ScrollView,TouchableOpacity,SafeAreaView,StatusBar} from 'react-native';
-import {colors,spacing,fonts,type} from '../constants/theme';
+import {colors,spacing,fonts,type,radius,shadow} from '../constants/theme';
 import {BOOKS,CHALLENGES} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
@@ -46,9 +46,9 @@ export default function ChallengeModal({challengeId,onClose,onOpenBook}:Props){
           </TouchableOpacity>
         </View>
 
-        <View style={{padding:spacing.lg}}>
+        <View style={{padding:spacing.lg,gap:10}}>
           {ch.books.map((id,i)=>{const b=all.find(x=>x.id===id); if(!b) return null; const d=done.has(id);
-            return <TouchableOpacity key={id} onPress={()=>onOpenBook(id)} style={{flexDirection:'row',gap:12,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border,alignItems:'center'}}>
+            return <TouchableOpacity key={id} onPress={()=>onOpenBook(id)} style={{flexDirection:'row',gap:12,padding:12,backgroundColor:colors.surface,borderRadius:radius.lg,alignItems:'center',...shadow.soft}}>
               <View style={{width:24,height:24,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:d?colors.accent:colors.surface2,borderWidth:1,borderColor:d?colors.accent:colors.border}}>
                 <Text style={{fontFamily:fonts.sansBold,fontSize:11,color:d?colors.bg:colors.text3}}>{d?'✓':i+1}</Text>
               </View>
