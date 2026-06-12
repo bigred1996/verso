@@ -8,33 +8,26 @@ import {TextInput} from 'react-native';
 import {useStore} from '../../store';
 import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
-import BookClubModal from '../../components/BookClubModal';
 import ChallengeModal from '../../components/ChallengeModal';
 import AuthorModal from '../../components/AuthorModal';
-import CompareModal from '../../components/CompareModal';
 import FriendProfileModal from '../../components/FriendProfileModal';
 
-const SUBS=['Feed','Clubs','Challenges','Authors','Buddies'] as const;
+const SUBS=['Feed','Challenges','Authors'] as const;
 type Sub=typeof SUBS[number];
 const fr=(id:string)=>FRIENDS.find(f=>f.id===id);
 
 export default function SocialScreen(){
   const insets=useSafeAreaInsets();
   const router=useRouter();
-  const {buddyReads,authorFollows,toggleAuthorFollow,customBooks,shelf,userClubs,userChallenges,createClub,createChallenge}=useStore();
+  const {authorFollows,toggleAuthorFollow,customBooks,userChallenges,createChallenge}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const [sub,setSub]=useState<Sub>('Feed');
   const [detailId,setDetailId]=useState<string|null>(null);
-  const [showClub,setShowClub]=useState(false);
-  const [clubOpenId,setClubOpenId]=useState<string|null>(null);
   const [challengeId,setChallengeId]=useState<string|null>(null);
   const [authorOpen,setAuthorOpen]=useState<string|null>(null);
-  const [showCompare,setShowCompare]=useState(false);
   const [friendOpen,setFriendOpen]=useState<string|null>(null);
   const [reacted,setReacted]=useState<Record<string,boolean>>({});
-  const [clubQ,setClubQ]=useState(''); const [clubName,setClubName]=useState(''); const [clubBook,setClubBook]=useState<string|null>(null); const [clubCreating,setClubCreating]=useState(false);
   const [chQ,setChQ]=useState(''); const [chTitle,setChTitle]=useState(''); const [chDesc,setChDesc]=useState(''); const [chGoal,setChGoal]=useState('12'); const [chCreating,setChCreating]=useState(false);
-  const shelfBooks=all.filter(b=>shelf[b.id]==='reading'||shelf[b.id]==='want'||shelf[b.id]==='read');
 
   const twins=[...FRIENDS].sort((a,b)=>b.match-a.match);
   const authors=Object.keys(AUTHOR_DATA);
@@ -55,7 +48,7 @@ export default function SocialScreen(){
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:4,flexDirection:'row',justifyContent:'space-between',alignItems:'flex-end'}}>
       <View>
         <Text style={[type.label,{marginBottom:2}]}>Community</Text>
-        <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text}}>Social</Text>
+        <Text style={{fontFamily:fonts.serifItalic,fontSize:30,lineHeight:40,color:colors.text}}>Social</Text>
       </View>
       <TouchableOpacity onPress={()=>router.push('/profile')} style={{width:40,height:40,borderRadius:20,backgroundColor:colors.accent,alignItems:'center',justifyContent:'center',...shadow.soft}}>
         <Text style={{fontFamily:fonts.serifBold,fontSize:17,color:colors.accentText}}>C</Text>
@@ -70,65 +63,77 @@ export default function SocialScreen(){
     <ScrollView showsVerticalScrollIndicator={false}>
       {/* FEED */}
       {sub==='Feed'&&<View>
-        {/* taste-twins strip */}
-        <View style={{borderBottomWidth:1,borderBottomColor:colors.border,paddingVertical:spacing.md}}>
-          <Text style={[type.label,{paddingHorizontal:spacing.lg,marginBottom:10}]}>Your Taste-Twins</Text>
+        {/* story-ring taste-twins strip */}
+        <View style={{paddingVertical:spacing.md}}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:14}}>
-            {twins.map(f=><TouchableOpacity key={f.id} onPress={()=>setFriendOpen(f.id)} style={{alignItems:'center',width:60}}>
-              <View style={{width:46,height:46,borderRadius:23,backgroundColor:f.color+'28',alignItems:'center',justifyContent:'center',marginBottom:5}}><Text style={{fontFamily:fonts.sansBold,fontSize:16,color:f.color}}>{f.init}</Text></View>
-              <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}} numberOfLines={1}>{f.name.split(' ')[0]}</Text>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.accent}}>{f.match}%</Text>
+            {twins.map(f=><TouchableOpacity key={f.id} onPress={()=>setFriendOpen(f.id)} style={{alignItems:'center',width:64}}>
+              <View style={{width:58,height:58,borderRadius:29,borderWidth:2.5,borderColor:f.color,alignItems:'center',justifyContent:'center',marginBottom:5}}>
+                <View style={{width:48,height:48,borderRadius:24,backgroundColor:f.color+'28',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:17,color:f.color}}>{f.init}</Text></View>
+              </View>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text2}} numberOfLines={1}>{f.name.split(' ')[0]}</Text>
+              <Text style={{fontFamily:fonts.sansBold,fontSize:9,color:colors.accent}}>{f.match}% match</Text>
             </TouchableOpacity>)}
           </ScrollView>
         </View>
-        {ACTIVITY.map(it=>{const f=fr(it.user);const b=it.bookId?all.find(x=>x.id===it.bookId):null;
-          return <View key={it.id} style={{padding:spacing.lg,backgroundColor:colors.surface,borderRadius:12,marginHorizontal:spacing.lg,marginBottom:8,marginTop:4}}>
-            <View style={{flexDirection:'row',gap:10}}>
-              <TouchableOpacity disabled={!f} onPress={()=>f&&setFriendOpen(f.id)} style={{width:34,height:34,borderRadius:17,backgroundColor:(f?.color||colors.accent)+'28',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:f?.color||colors.accent}}>{f?.init}</Text></TouchableOpacity>
+
+        {ACTIVITY.map(it=>{
+          const f=fr(it.user);const b=it.bookId?all.find(x=>x.id===it.bookId):null;
+          const seed=it.id.split('').reduce((n,c)=>n+c.charCodeAt(0),0);
+          const likeCount=(seed%19)+3+(reacted[it.id]?1:0);
+          const commentCount=seed%7;
+          const liked=!!reacted[it.id];
+          const handle='@'+(f?.name.split(' ')[0].toLowerCase()||'reader')+'.reads';
+          return <View key={it.id} style={{backgroundColor:colors.surface,borderRadius:radius.lg,marginHorizontal:spacing.lg,marginBottom:12,padding:spacing.lg,...shadow.soft}}>
+            {/* post header */}
+            <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:10}}>
+              <TouchableOpacity disabled={!f} onPress={()=>f&&setFriendOpen(f.id)} style={{width:40,height:40,borderRadius:20,backgroundColor:(f?.color||colors.accent)+'28',alignItems:'center',justifyContent:'center'}}>
+                <Text style={{fontFamily:fonts.sansBold,fontSize:15,color:f?.color||colors.accent}}>{f?.init}</Text>
+              </TouchableOpacity>
               <View style={{flex:1}}>
-                <View style={{flexDirection:'row',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                  <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text}}>{f?.name.split(' ')[0]}</Text>
-                  <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.accent}}>{f?.match}%</Text>
-                  <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>· {it.ts}</Text>
+                <View style={{flexDirection:'row',alignItems:'center',gap:6}}>
+                  <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:colors.text}}>{f?.name.split(' ')[0]}</Text>
+                  <View style={{paddingHorizontal:6,paddingVertical:2,backgroundColor:colors.accentDim,borderRadius:999}}><Text style={{fontFamily:fonts.sansBold,fontSize:9,color:colors.accent}}>{f?.match}%</Text></View>
                 </View>
-                <View style={{marginTop:2}}>{feedLine(it)}</View>
-                {(it.type==='hot'||it.type==='dnf')&&it.text?<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text2,lineHeight:19,marginTop:6}}>"{it.text}"</Text>:null}
-                <View style={{flexDirection:'row',gap:16,marginTop:10}}>
-                  <TouchableOpacity onPress={()=>setReacted(r=>({...r,[it.id]:!r[it.id]}))}><Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:reacted[it.id]?colors.accent:colors.text3}}>{reacted[it.id]?'♥ Liked':'♡ Like'}</Text></TouchableOpacity>
-                  {b&&<TouchableOpacity onPress={()=>setDetailId(b.id)}><Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.text3}}>View book</Text></TouchableOpacity>}
-                </View>
+                <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{handle} · {it.ts}</Text>
               </View>
+              <View style={{marginTop:-6}}>{feedLine(it)?<View style={{paddingHorizontal:8,paddingVertical:3,backgroundColor:colors.surface2,borderRadius:999}}><Text style={{fontFamily:fonts.sansMedium,fontSize:9,color:colors.text3,textTransform:'uppercase',letterSpacing:0.5}}>{it.type==='hot'?'Hot take':it.type==='rated'?'Rated':it.type==='reading'?'Reading':it.type==='dnf'?'DNF':'Milestone'}</Text></View>:null}</View>
+            </View>
+
+            {/* post body — hot takes read like tweets */}
+            {(it.type==='hot'||it.type==='dnf')&&it.text
+              ?<Text style={{fontFamily:fonts.serif,fontSize:17,color:colors.text,lineHeight:26,marginBottom:12}}>"{it.text}"</Text>
+              :<View style={{marginBottom:10}}>{feedLine(it)}</View>}
+
+            {/* media: embedded book card — tap for full details */}
+            {b&&<TouchableOpacity activeOpacity={0.85} onPress={()=>setDetailId(b.id)}
+              style={{flexDirection:'row',gap:12,padding:12,backgroundColor:colors.bg,borderRadius:radius.md,borderWidth:1,borderColor:colors.border,alignItems:'center',marginBottom:12}}>
+              <BookCover bookId={b.id} size="sm"/>
+              <View style={{flex:1}}>
+                <Text style={{fontFamily:fonts.serifBold,fontSize:14,color:colors.text}} numberOfLines={1}>{b.title}</Text>
+                <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:1}}>{b.author}</Text>
+                {b.readers>0&&<Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.accent,marginTop:4}}>★ {b.avgRating} · {(b.readers/1000).toFixed(0)}k readers</Text>}
+              </View>
+              <Text style={{fontSize:14,color:colors.text3}}>›</Text>
+            </TouchableOpacity>}
+
+            {/* action bar */}
+            <View style={{flexDirection:'row',alignItems:'center',gap:22,paddingTop:2}}>
+              <TouchableOpacity onPress={()=>setReacted(r=>({...r,[it.id]:!r[it.id]}))} style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <Text style={{fontSize:16,color:liked?colors.danger:colors.text3}}>{liked?'♥':'♡'}</Text>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:liked?colors.danger:colors.text3}}>{likeCount}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity disabled={!f} onPress={()=>f&&setFriendOpen(f.id)} style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <Text style={{fontSize:14,color:colors.text3}}>💬</Text>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text3}}>{commentCount}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <Text style={{fontSize:14,color:colors.text3}}>↗</Text>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text3}}>Share</Text>
+              </TouchableOpacity>
             </View>
           </View>;})}
         <View style={{height:24}}/>
       </View>}
-
-      {/* CLUBS */}
-      {sub==='Clubs'&&(()=>{
-        const seeded=[{id:'lit-salon',name:'The Lit Salon',sub:'Reading Intermezzo · Elif, Juno'},{id:'dark-reads',name:'Dark & Dense',sub:'Reading A Little Life · Marcus, Priya'}];
-        const userC=userClubs.map(c=>({id:c.id,name:c.name,sub:`Reading ${all.find(b=>b.id===c.bookId)?.title||'a book'} · you`}));
-        const allC=[...seeded,...userC].filter(c=>c.name.toLowerCase().includes(clubQ.toLowerCase()));
-        return <View style={{padding:spacing.lg}}>
-          <TextInput style={inp} placeholder="Search clubs…" placeholderTextColor={colors.text3} value={clubQ} onChangeText={setClubQ}/>
-          {clubCreating?<View style={{marginTop:spacing.md,gap:8,backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:14,borderRadius:16}}>
-            <TextInput style={inp} placeholder="Club name — make it good" placeholderTextColor={colors.text3} value={clubName} onChangeText={setClubName}/>
-            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Current read:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}><View style={{flexDirection:'row',gap:8}}>
-              {shelfBooks.slice(0,12).map(b=><TouchableOpacity key={b.id} onPress={()=>setClubBook(b.id)} style={[chip,clubBook===b.id&&activeChip]}><Text style={{fontFamily:fonts.sans,fontSize:11,color:clubBook===b.id?colors.accent:colors.text2}} numberOfLines={1}>{b.title}</Text></TouchableOpacity>)}
-            </View></ScrollView>
-            <View style={{flexDirection:'row',gap:8}}>
-              <TouchableOpacity style={{flex:1,backgroundColor:colors.accent,padding:11,alignItems:'center',borderRadius:999}} onPress={()=>{if(clubName.trim()&&clubBook){createClub(clubName.trim(),clubBook);setClubName('');setClubBook(null);setClubCreating(false);}}}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.bg}}>Create club</Text></TouchableOpacity>
-              <TouchableOpacity style={{paddingHorizontal:16,justifyContent:'center'}} onPress={()=>setClubCreating(false)}><Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}}>Cancel</Text></TouchableOpacity>
-            </View>
-          </View>:<TouchableOpacity onPress={()=>setClubCreating(true)} style={{marginTop:spacing.md,padding:13,borderWidth:1,borderColor:colors.border,borderStyle:'dashed',alignItems:'center',borderRadius:12}}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.text2}}>+ Start a club</Text></TouchableOpacity>}
-          <View style={{height:spacing.md}}/>
-          {allC.map(c=><TouchableOpacity key={c.id} onPress={()=>{setClubOpenId(c.id.startsWith('club-')?c.id:null);setShowClub(true);}} style={{backgroundColor:colors.surface,borderWidth:1,borderColor:colors.border,padding:spacing.lg,marginBottom:10,borderRadius:16}}>
-            <Text style={{fontFamily:fonts.serifBold,fontSize:16,color:colors.text,marginBottom:4}}>{c.name}</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}}>{c.sub} · tap to open</Text>
-          </TouchableOpacity>)}
-          {allC.length===0&&<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.lg}}>No clubs match. Start one. Name it something good.</Text>}
-        </View>;
-      })()}
 
       {/* CHALLENGES */}
       {sub==='Challenges'&&(()=>{
@@ -176,26 +181,11 @@ export default function SocialScreen(){
         <View style={{height:24}}/>
       </View>}
 
-      {/* BUDDIES */}
-      {sub==='Buddies'&&<View style={{padding:spacing.lg}}>
-        {buddyReads.length>0?buddyReads.map(br=>{const b=all.find(x=>x.id===br.bookId);const f=fr(br.partner);if(!b)return null;
-          const total=BOOKS.find(x=>x.id===br.bookId)?.pages||400;
-          return <TouchableOpacity key={br.bookId} onPress={()=>setDetailId(br.bookId)} style={{flexDirection:'row',gap:12,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border}}>
-            <BookCover bookId={br.bookId} size="sm"/>
-            <View style={{flex:1,justifyContent:'center'}}>
-              <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text}}>{b.title}</Text>
-              <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>with {f?.name.split(' ')[0]} · you p.{br.myPage} / them p.{br.theirPage}</Text>
-            </View>
-            <View style={{alignSelf:'center',paddingHorizontal:8,paddingVertical:3,backgroundColor:colors.accentDim,borderWidth:1,borderColor:colors.accent,borderRadius:999}}><Text style={{fontFamily:fonts.sansMedium,fontSize:9,color:colors.accent}}>BUDDY READ</Text></View>
-          </TouchableOpacity>;}):<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.xl}}>No buddy reads yet. Open a book and start one.</Text>}
-      </View>}
     </ScrollView>
 
     <BookDetailModal bookId={detailId} onClose={()=>setDetailId(null)}/>
-    {showClub&&<BookClubModal visible initialClubId={clubOpenId} onClose={()=>{setShowClub(false);setClubOpenId(null);}} onOpenBook={id=>{setShowClub(false);setDetailId(id);}}/>}
     <ChallengeModal challengeId={challengeId} onClose={()=>setChallengeId(null)} onOpenBook={id=>{setChallengeId(null);setDetailId(id);}}/>
     <AuthorModal author={authorOpen} onClose={()=>setAuthorOpen(null)} onOpenBook={id=>{setAuthorOpen(null);setDetailId(id);}}/>
-    {showCompare&&<CompareModal visible onClose={()=>setShowCompare(false)}/>}
     <FriendProfileModal friendId={friendOpen} onClose={()=>setFriendOpen(null)} onOpenBook={id=>{setFriendOpen(null);setDetailId(id);}}/>
   </View>;
 }

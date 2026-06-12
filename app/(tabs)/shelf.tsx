@@ -10,14 +10,16 @@ import StatsView from '../../components/StatsView';
 import ListsView from '../../components/ListsView';
 import ProfilePanel from '../../components/ProfilePanel';
 
-const SUBS=['Stats','Shelves','Lists','Rankings','Journal','Favorites','Profile'] as const;
+const SUBS=['Stats','Library','Journal','Profile'] as const;
 type Sub=typeof SUBS[number];
 const SHELF_TABS=[{k:'read',l:'Read'},{k:'reading',l:'Reading'},{k:'want',l:'TBR'},{k:'dnf',l:'DNF'}] as const;
+const LIB_VIEWS=[{k:'lists',l:'Lists'},{k:'favorites',l:'Favorites'},{k:'rankings',l:'Rankings'}] as const;
 const SORTS=['Date','Title','Author','Rating'] as const;
 
 export default function ShelfScreen(){
   const insets=useSafeAreaInsets();
   const [sub,setSub]=useState<Sub>('Stats');
+  const [libMode,setLibMode]=useState<'shelf'|'lists'|'favorites'|'rankings'>('shelf');
   const [shelfTab,setShelfTab]=useState<'read'|'reading'|'want'|'dnf'>('read');
   const [sort,setSort]=useState<typeof SORTS[number]>('Date');
   const [detailId,setDetailId]=useState<string|null>(null);
@@ -68,7 +70,7 @@ export default function ShelfScreen(){
         <Text style={{fontFamily:fonts.serifBold,width:24,fontSize:15,color:i<3?colors.accent:colors.text3,textAlign:'center'}}>{i+1}</Text>
         <BookCover bookId={b.id} size="sm"/>
         <View style={{flex:1}}><Text style={s.title}>{b.title}</Text><Text style={s.author}>{b.author}</Text><Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent,marginTop:2}}>{eloRatings[b.id]} ELO</Text></View>
-      </TouchableOpacity>):<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>No rankings yet. Use Versus mode in Book Tinder to build them.</Text>}
+      </TouchableOpacity>):<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>No rankings yet. Use Versus mode in Book Swipe to build them.</Text>}
     </View>;
   }
 
@@ -111,7 +113,7 @@ export default function ShelfScreen(){
     <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:4}}>
       <Text style={[type.label,{marginBottom:2}]}>Your library</Text>
-      <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text}}>Shelf</Text>
+      <Text style={{fontFamily:fonts.serifItalic,fontSize:30,lineHeight:40,color:colors.text}}>Shelf</Text>
     </View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,height:60}} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:8,alignItems:'center'}}>
       {SUBS.map(t=><TouchableOpacity key={t} onPress={()=>setSub(t)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:radius.pill,backgroundColor:sub===t?colors.accent:colors.surface,borderWidth:1,borderColor:sub===t?colors.accent:colors.border}}>
@@ -121,24 +123,32 @@ export default function ShelfScreen(){
 
     <ScrollView showsVerticalScrollIndicator={false}>
       {sub==='Stats'&&<StatsView/>}
-      {sub==='Lists'&&<ListsView onOpenBook={setDetailId}/>}
       {sub==='Profile'&&<ProfilePanel/>}
-      {sub==='Rankings'&&<Rankings/>}
       {sub==='Journal'&&<Journal/>}
-      {sub==='Favorites'&&<Favorites/>}
-      {sub==='Shelves'&&<View>
-        {/* shelf switcher + sort */}
-        <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingTop:12}}>
-          <View style={{flexDirection:'row',gap:8}}>
-            {SHELF_TABS.map(t=><TouchableOpacity key={t.k} onPress={()=>setShelfTab(t.k)} style={{paddingHorizontal:13,paddingVertical:7,backgroundColor:shelfTab===t.k?colors.accentDim:colors.surface,borderWidth:1,borderColor:shelfTab===t.k?colors.accent:colors.border,borderRadius:999}}>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:shelfTab===t.k?colors.accent:colors.text2}}>{t.l}</Text>
-            </TouchableOpacity>)}
+
+      {/* LIBRARY = shelves + lists + favorites + rankings, unified under one chip row */}
+      {sub==='Library'&&<View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,height:56}} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:8,alignItems:'center'}}>
+          {SHELF_TABS.map(t=>{const active=libMode==='shelf'&&shelfTab===t.k;return <TouchableOpacity key={t.k} onPress={()=>{setShelfTab(t.k);setLibMode('shelf');}} style={{paddingHorizontal:14,paddingVertical:8,backgroundColor:active?colors.accentDim:colors.surface,borderWidth:1,borderColor:active?colors.accent:colors.border,borderRadius:999}}>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:active?colors.accent:colors.text2}}>{t.l}</Text>
+          </TouchableOpacity>;})}
+          <View style={{width:1,height:20,backgroundColor:colors.border,marginHorizontal:2}}/>
+          {LIB_VIEWS.map(v=>{const active=libMode===v.k;return <TouchableOpacity key={v.k} onPress={()=>setLibMode(v.k)} style={{paddingHorizontal:14,paddingVertical:8,backgroundColor:active?colors.accentDim:colors.surface,borderWidth:1,borderColor:active?colors.accent:colors.border,borderRadius:999}}>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:active?colors.accent:colors.text2}}>{v.l}</Text>
+          </TouchableOpacity>;})}
+        </ScrollView>
+
+        {libMode==='lists'?<ListsView onOpenBook={setDetailId}/>
+        :libMode==='favorites'?<Favorites/>
+        :libMode==='rankings'?<Rankings/>
+        :<View>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingBottom:8}}>
+            <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}}>{list.length} book{list.length!==1?'s':''}</Text>
+            <TouchableOpacity onPress={()=>setSort(SORTS[(SORTS.indexOf(sort)+1)%SORTS.length])}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Sort: <Text style={{color:colors.accent}}>{sort}</Text></Text></TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={()=>setSort(SORTS[(SORTS.indexOf(sort)+1)%SORTS.length])}><Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>Sort: <Text style={{color:colors.accent}}>{sort}</Text></Text></TouchableOpacity>
-        </View>
-        <View style={{height:8}}/>
-        {list.length?list.map(b=><Row key={b.id} id={b.id} sub2={shelfTab==='dnf'&&dnfReasons[b.id]?<Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B',marginTop:3}}>{dnfReasons[b.id].reason} · stopped p.{dnfReasons[b.id].page}</Text>:undefined}/>):
-          <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>{shelfTab==='dnf'?'Nothing abandoned. Yet.':'Nothing here yet.'}</Text>}
+          {list.length?list.map(b=><Row key={b.id} id={b.id} sub2={shelfTab==='dnf'&&dnfReasons[b.id]?<Text style={{fontFamily:fonts.sans,fontSize:11,color:'#C97B7B',marginTop:3}}>{dnfReasons[b.id].reason} · stopped p.{dnfReasons[b.id].page}</Text>:undefined}/>):
+            <Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>{shelfTab==='dnf'?'Nothing abandoned. Yet.':'Nothing here yet.'}</Text>}
+        </View>}
       </View>}
       <View style={{height:32}}/>
     </ScrollView>

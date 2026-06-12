@@ -21,66 +21,79 @@ node node_modules/typescript/bin/tsc --noEmit -p tsconfig.json
 npm install --legacy-peer-deps
 ```
 
-The preview server is configured in `.claude/launch.json` as `"verso-app"` — use `preview_start` with that name.
+There are no tests or lint config — type-checking is the only automated gate.
+
+### Web preview (`preview_*` tools, launch name `verso-app`)
+- **After editing, the preview serves a stale JS bundle** — `window.location.reload()` and HMR often don't pick up changes (Metro logs "Bundled" but the client cache wins). **`preview_stop` then `preview_start` to force a fresh bundle.** Confirm by asserting on a known new string before screenshotting.
+- The native preview viewport collapses to ~2px wide — always `preview_resize` to the `mobile` preset (375×812) first, or screenshots are unreadable strips.
+- RN-web `TouchableOpacity`/`Pressable` `onPress` does **not** reliably fire from a synthetic `MouseEvent('click')` in `preview_eval` (segmented pills work; the Book Swipe trigger and drag cards do not). Verify those by reading state/DOM, not by simulating taps.
+- `type.label` and other `textTransform:'uppercase'` text returns **uppercased** from `innerText` in Chrome — match case-insensitively in assertions.
 
 ## Architecture
 
 ### App Structure
-- **expo-router** file-based routing: `app/(tabs)/` contains the main screens
-- 4-tab IA, in tab-bar order: **Today** (`index.tsx`), **Discover** (`discover.tsx`), **Social** (`social.tsx`), **Shelf** (`shelf.tsx`)
-- **`index.tsx` is the Today screen, not Discover** — Today is the default landing route (`/`). The route files were deliberately swapped so the app opens on Today; the Discover screen lives in `discover.tsx`. Don't assume `index` == Discover.
-- Tab order and which screens appear in the bar are controlled in `_layout.tsx` (`<Tabs.Screen>` order; `href:null` hides a route from the bar)
-- `profile.tsx` and `search.tsx` have `href:null` — pushed via `router.push('/profile')`, not tab links
-- Tab screens use a plain `View` with `paddingTop: useSafeAreaInsets().top` (not `SafeAreaView`) so the header clears the notch; the tab bar adds `insets.bottom`
-- All modals are full-screen `Modal` components imported into the screen that owns them
+- **expo-router** file-based routing: `app/(tabs)/` holds the screens.
+- 4-tab IA, in tab-bar order (`_layout.tsx`): **Today** (`index.tsx`), **Discover** (`discover.tsx`), **Social** (`social.tsx`), **Shelf** (`shelf.tsx`).
+- **`index.tsx` is the Today screen, not Discover** — Today is the default landing route (`/`). Don't assume `index` == Discover.
+- `profile.tsx` is `href:null` (pushed via `router.push('/profile')`). `search.tsx` is also `href:null` but currently **orphaned** — nothing navigates to it; Discover has its own inline search.
+- Tab screens use a plain `View` with `paddingTop: useSafeAreaInsets().top` (not `SafeAreaView`) so the header clears the notch; the tab bar adds `insets.bottom`.
+- Each screen owns a horizontal pill **sub-nav** (`const [sub,setSub]`). All modals are full-screen `Modal` components imported into the screen that owns them.
 
 ### State Management
-Single Zustand store at `store/index.ts` with `persist` middleware → `AsyncStorage` (key: `'verso-storage'`). All user data lives here: shelf status, ratings, journal, rereads, reviews, lists, clubs, challenges, buddy reads, ELO ratings, streak days, stats visibility.
+Single Zustand store at `store/index.ts` with `persist` → `AsyncStorage` (key `'verso-storage'`). All user data lives here: shelf status, ratings, journal, rereads, reviews, lists, challenges, buddy reads, ELO ratings, streak days, favourites, stats visibility, **swipe taste-log**.
 
-**Never duplicate data between store and component state.** Component state is only for transient UI (which tab is active, input values, modal open/closed).
+**Never duplicate data between store and component state.** Component state is only transient UI (active tab, input values, modal open/closed).
+
+Persisted state overrides new store defaults — to see changed seed data, clear storage (web: `localStorage.removeItem('verso-storage')`).
+
+> Dead store fields: the **Clubs** feature was removed from Social, so `userClubs / createClub / clubMessages / sendClubMessage` (and `components/BookClubModal.tsx`) are orphaned but still present.
 
 ### Data Layer
 All mock/seed data is in `data/books.ts`. Key exports:
-- `BOOKS` — main catalogue array (Book interface)
-- `FRIENDS` — 4 friends (elif/marcus/juno/priya) with match %, color, init
-- `FRIEND_BOOK` — per-book friend ratings + takes: `Record<bookId, Record<friendId, {r, t}>>`
-- `BOOK_VIBES` — mood/pace/weekly readers per book
-- `BOOK_TAGS` — tropes/themes/CW/subgenres per book
-- `AUTHOR_DATA` — rich author bios keyed by full name
-- `CHALLENGES`, `ACTIVITY`, `ISBNS`, `COVER_IDS`, `PAGE_COUNTS`
+- `BOOKS` — catalogue array (Book interface). `FRIENDS` (elif/marcus/juno/priya) with match %, color, init.
+- `FRIEND_BOOK` — per-book friend ratings + takes; `BOOK_VIBES` — mood/pace/weekly readers; `BOOK_TAGS` — tropes/themes/CW/subgenres; `BOOK_QUOTES` — memorable quotes; `AUTHOR_DATA` — bios keyed by full author name.
+- `CHALLENGES`, `ACTIVITY`, `ISBNS`, `COVER_IDS`, `PAGE_COUNTS`.
+- **`recommendBooks(seedIds, allBooks, exclude, limit)`** — content-based recsys scoring candidates by shared genre/mood/pace/trope/theme/author against the user's "liked" seed set; returns `{id, reasonId, score}` so the UI can say "Because you loved X". Used on Today and Discover. Swap the body for a server call later — the return shape is the UI contract.
 
-Custom books added by user are stored in `store.customBooks[]`. Code that iterates books should always use `[...BOOKS, ...(Array.isArray(customBooks) ? customBooks : [])]`.
+Custom books live in `store.customBooks[]`. Code iterating books should always use `[...BOOKS, ...(Array.isArray(customBooks) ? customBooks : [])]`.
+
+### Backend stubs (wired, awaiting a server)
+Two features are built client-side with a clean seam for a future backend:
+- **Swipe taste-log** (recommendation engine): Book Swipe records every decision via `store.recordSwipe(bookId, action)` → appends to the append-only `swipeEvents: SwipeEvent[]` log (`{bookId, action, ts, synced}`). Swipes intentionally do **nothing** to shelves/ratings. A backend drains rows where `!synced`, then calls `markSwipesSynced(lastTs)`. `swipeData` keeps the latest verdict per book (drives the queue).
+- **Create insights API** (`StatsView.tsx`): `const INSIGHTS_API = { endpoint:'', apiKey:'' }`. Set `endpoint` to POST `{prompt, library[]}` and render the returned `{title, insight, rows:[{label,value,display?,bookIds?}]}`. Empty endpoint / any failure falls back to the on-device generator (`buildChart`).
 
 ### Theme System
-`constants/theme.ts` — single source of truth for all visual tokens. **The app is a warm _light_ theme** (cream bg, white + pastel cards, dark text) — not dark. StatusBars are `dark-content` everywhere.
-- `colors` — bg (warm greige) / surface (white cards) / surface2 (warm fill, used for progress-bar tracks) / text / text2 / text3 / accent (forest green) / `accentText` (white text on accent fills — use this, not `colors.bg`, for new button labels) / accentDim / border / danger
-- `pastels` + `pastelText` — sage/blush/butter/sky/lavender/clay tints and their matching dark text colors, for hero cards and stat cells
-- `spacing` — xs/sm/md/lg/xl/xxl
-- `radius` — sm/md/lg/xl/pill (use `radius.pill` = 999 for pills/round buttons)
-- `shadow` — `card` and `soft` elevation presets (spread into a style: `...shadow.soft`)
-- `fonts` — Playfair Display (serif/serifBold/serifItalic) + DM Sans (sans/sansMedium/sansBold)
-- `type` — shared text style objects (label, bookTitle, body, etc.)
+`constants/theme.ts` — single source of truth. **Warm _light_ theme** (cream bg, white + pastel cards, dark text). StatusBars are `dark-content` everywhere.
+- `colors` — bg / surface (white cards) / surface2 (warm fill, progress tracks) / text·text2·text3 / accent (forest green) / `accentText` (white text on accent fills — use this, not `colors.bg`, for new button labels) / accentDim / border / danger.
+- `pastels` + `pastelText` — sage/blush/butter/sky/lavender/clay tints and matching dark text, for hero cards and stat cells.
+- `spacing` xs→xxl, `radius` (use `radius.pill`=999 for pills), `shadow` (`card`/`soft`, spread: `...shadow.soft`), `fonts` (Playfair serif/serifBold/serifItalic + DM Sans sans/sansMedium/sansBold), `type` (shared text styles).
 
-Visual language: white/pastel cards float on the bg with `borderRadius: radius.lg` + `...shadow.soft` and horizontal margins — **avoid full-width `borderBottomWidth` divider rows** in new UI; use spaced cards instead.
+Visual language: white/pastel cards float on the bg with `radius.lg` + `...shadow.soft` and horizontal margins — **avoid full-width `borderBottomWidth` divider rows** in new UI; use spaced cards.
 
 ### Book Covers
-`BookCover` component fetches from Open Library Covers API using `ISBNS[bookId]` or `COVER_IDS[bookId]`. Falls back to a deterministic colored placeholder. Always pass `bookId`; optionally pass `olCoverId` for custom books returned from OL search.
+`BookCover` fetches from Open Library using `COVER_IDS[bookId]` (exact OL cover id, preferred) else `ISBNS[bookId]`, falling back to a deterministic colored placeholder. Always pass `bookId`; pass `olCoverId` for custom books from OL search. **Some seed ISBNs are wrong** (resolve to unrelated books on OL) — prefer adding a correct `COVER_IDS` entry over trusting `ISBNS` for display.
 
-### react-native-svg Gotcha
-Do **not** use `origin` or `rotation` props on `<G>` elements — they emit "Invalid DOM property transform-origin" warnings on web. Use `strokeDashoffset` for arc positioning instead.
+## Screen patterns
 
-## Patterns
+**Today** (`index.tsx`) — engagement home, order: greeting → **streak hero** → **Book Swipe** → continue reading → friends activity → recommendations → trending → goal/challenge. Streak is derived from `store.streakDays` (`'Mon D'` labels): current streak = run of consecutive logged days ending today (or yesterday if today isn't logged). `logToday()` appends today.
 
-**Sub-navs** are horizontal `ScrollView` with filled `TouchableOpacity` pill tabs (active = `colors.accent` bg + `colors.accentText`) — each screen manages its own `const [sub, setSub]` state. **Web gotcha:** a horizontal `ScrollView` with `flexGrow:0` collapses to ~14px tall on react-native-web, clipping the pills. Give the sub-nav `ScrollView` an explicit `height` (e.g. `style={{flexGrow:0, height:60}}`) and `contentContainerStyle={{alignItems:'center'}}`.
+**Discover** (`discover.tsx`) — search + 2 sub-tabs (`For You` · `Mood`). For You leads with `recommendBooks` ("Recommended for you"), then a Book Swipe card, taste-twin picks, trending, editor picks. Search overrides the tabs and offers add-from-OL.
 
-**Today screen** (`index.tsx`) is the streak/engagement home. Streak is derived from `store.streakDays` (array of `'Mon D'` labels): the current streak is the run of consecutive logged days ending today, or yesterday if today isn't logged yet. `store.logToday()` appends today's label. `streakDays` is seeded in the store default so the hero isn't empty on first run — clear AsyncStorage (web: `localStorage.removeItem('verso-storage')`) to see seed changes, since persisted state overrides new defaults.
+**Shelf** (`shelf.tsx`) — sub-nav `Stats · Library · Journal · Profile` (default Stats). **Library** unifies four collection views behind one chip row via `libMode: 'shelf'|'lists'|'favorites'|'rankings'` (shelf chips Read/Reading/TBR/DNF, then Lists/Favorites/Rankings). Rankings is ELO order; ELO is built by Book Swipe's Versus mode.
 
-**Stats sub-tabs**: `StatsView` groups its 13 sections under an Overview/Reading/Taste segmented control (`GROUP` map of section-key → segment). A section renders when `!statsHidden[key] && GROUP[key] === seg`. Customize (show/hide) still toggles `statsHidden` independent of the segment.
+**Stats** (`components/StatsView.tsx`) — 14 sections grouped by a 4-way segmented control via the `GROUP` map (section-key → `Overview|Reading|Taste`), plus a **`Create`** segment.
+- **Overview** renders sections as always-open scrolling cards. **Reading/Taste** render them as a **single-open accordion** (`openSection` state; collapsed cards show a teaser stat; first card auto-expands per tab).
+- Every breakdown bar/chip/cell is tappable: inline rows expand a horizontal cover strip (`exp` state); glance cells open a full drill-down sheet. Breakdowns are computed from the user's engaged "pool" (shelves+ratings+favourites+lists), falling back to the whole catalogue when the library is thin.
+- **Create** is the chart builder (see Backend stubs). **Customize** toggles `store.statsHidden[key]`; hidden sections don't render under any segment.
 
-**Modals** receive `bookId/visible/onClose` props. `BookDetailModal` uses an internal `localId` state so navigating author→book works without remounting.
+**Social** (`social.tsx`) — sub-nav `Feed · Challenges · Authors`. Feed is Instagram/Twitter-styled (story rings, @handles, post-type tag, tweet-like serif hot takes, embedded tappable book "media" card, like/comment/share bar). Like counts/comment counts are derived deterministically from a per-item hash (filler).
 
-**Add from search**: `index.tsx` passes `prefill` to `AddBookModal`, which calls Open Library `search.json` API on mount when prefill is set.
+**Book Swipe** (`components/SwipeModal.tsx`, header "Book Swipe") — two modes: Swipe (Tinder-style cards) and Versus (ELO). Gamified: rules intro (once per session via module-level `seenRules`, re-openable via `?`), synthesized Web-Audio sounds + mute, drag glow / verdict stamps / pop badge / confetti / progress bar / session counter. **Web drag** uses direct DOM `pointer*` listeners on the card node (RN-web's responder system is unreliable for drags); a small-movement pointerup is treated as a tap → `onOpenBook`. Native uses `PanResponder`.
 
-**ELO ranking**: `store.updateElo(ids, winnerId)` implements K=32 ELO. Called from `SwipeModal` on each swipe decision.
+**Modals** receive `bookId/visible/onClose`. `BookDetailModal` uses an internal `localId` so author→book navigation works without remounting; its review composer defaults to Hot Take.
 
-**Stats customization**: `store.statsHidden` is a `Record<string, boolean>`. `StatsView` checks `!statsHidden[key]` before rendering each section. `toggleStat(key)` flips it.
+## Gotchas
+- **Large Playfair _italic_ titles clip** without an explicit `lineHeight` (e.g. `fontSize:30` needs `lineHeight:40`) — the glyph box overflows the default line box and gets cut on-device.
+- **react-native-svg**: don't use `origin`/`rotation` props on `<G>` — they emit "Invalid DOM property transform-origin" on web. Use `strokeDashoffset` for arc positioning.
+- **Horizontal sub-nav `ScrollView` with `flexGrow:0` collapses to ~14px** on RN-web, clipping pills — give it an explicit `height` (e.g. `{flexGrow:0, height:56}`) and `contentContainerStyle={{alignItems:'center'}}`. (Fixed-count sub-navs now often use a flex row instead.)
+- `Date.now()`/`Math.random()` are fine in normal components (used by `recordSwipe`, confetti) — only forbidden inside Workflow scripts.

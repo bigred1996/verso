@@ -2,19 +2,19 @@ import React,{useState} from 'react';
 import {ScrollView,View,Text,TextInput,TouchableOpacity,StatusBar} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../../constants/theme';
-import {BOOKS,FRIENDS,PAGE_COUNTS,BOOK_VIBES,FRIEND_BOOK} from '../../data/books';
+import {BOOKS,FRIENDS,BOOK_VIBES,FRIEND_BOOK,recommendBooks} from '../../data/books';
 import {useStore,MOODS,PACES} from '../../store';
 import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
 import SwipeModal from '../../components/SwipeModal';
 import AddBookModal from '../../components/AddBookModal';
 
-const SUBS=['For You','Mood','Zeitgeist','Matches'] as const;
+const SUBS=['For You','Mood'] as const;
 type Sub=typeof SUBS[number];
 
 export default function DiscoverScreen(){
   const insets=useSafeAreaInsets();
-  const {shelf,journal,customBooks}=useStore();
+  const {shelf,ratings,favorites,swipeData,customBooks}=useStore();
   const allBooks=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const [sub,setSub]=useState<Sub>('For You');
   const [q,setQ]=useState('');
@@ -24,9 +24,7 @@ export default function DiscoverScreen(){
   const [addPrefill,setAddPrefill]=useState('');
   const [moods,setMoods]=useState<string[]>([]);
   const [pace,setPace]=useState<string|null>(null);
-  const [zTab,setZTab]=useState<'trending'|'new'>('trending');
 
-  const reading=allBooks.filter(b=>shelf[b.id]==='reading');
   const searching=q.trim().length>0;
   const results=allBooks.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase()));
 
@@ -38,11 +36,15 @@ export default function DiscoverScreen(){
     const paceOk=!pace||v.pace===pace;
     return moodOk&&paceOk;}).filter(b=>moods.length>0||pace);
 
-  // Zeitgeist
-  const trending=[...allBooks].filter(b=>BOOK_VIBES[b.id]).sort((a,b)=>BOOK_VIBES[b.id].weekly-BOOK_VIBES[a.id].weekly);
-  const newReleases=[...allBooks].filter(b=>b.year>0).sort((a,b)=>b.year-a.year);
+  // Recommendations from your likes (ratings ≥4 / Book Swipe likes / favourites)
+  const likedIds=allBooks.filter(b=>(ratings[b.id]||0)>=4||swipeData[b.id]==='like'||favorites.includes(b.id)).map(b=>b.id);
+  const recExclude=new Set<string>([...allBooks.filter(b=>shelf[b.id]).map(b=>b.id),...Object.keys(swipeData),...likedIds]);
+  const recs=recommendBooks(likedIds,allBooks,recExclude,8);
 
-  // Taste match feed: friends with 70%+ match, books they rated >=5 (then >=4)
+  // Trending this week
+  const trending=[...allBooks].filter(b=>BOOK_VIBES[b.id]).sort((a,b)=>BOOK_VIBES[b.id].weekly-BOOK_VIBES[a.id].weekly).slice(0,10);
+
+  // Taste-twin picks: high-match friends' 4★+ books you haven't shelved
   const twins=FRIENDS.filter(f=>f.match>=70);
   const feed:{bookId:string;friend:typeof FRIENDS[number];r:number}[]=[];
   allBooks.forEach(b=>{const ft=FRIEND_BOOK[b.id];if(!ft)return;
@@ -62,13 +64,23 @@ export default function DiscoverScreen(){
     </TouchableOpacity>;
   }
 
+  function PosterCard({id,caption}:{id:string;caption?:React.ReactNode}){
+    const b=allBooks.find(x=>x.id===id); if(!b) return null;
+    return <TouchableOpacity onPress={()=>setDetailId(id)} activeOpacity={0.85} style={{width:124,marginRight:12,backgroundColor:colors.surface,borderRadius:radius.lg,padding:10,...shadow.soft}}>
+      <BookCover bookId={id} size="sm"/>
+      <Text style={{fontFamily:fonts.serifBold,fontSize:12,color:colors.text,marginTop:8,lineHeight:16}} numberOfLines={2}>{b.title}</Text>
+      <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:2}} numberOfLines={1}>{b.author}</Text>
+      {caption}
+    </TouchableOpacity>;
+  }
+
   return <View style={{flex:1,backgroundColor:colors.bg,paddingTop:insets.top}}>
     <StatusBar barStyle="dark-content" backgroundColor={colors.bg}/>
     {/* Header */}
     <View style={{paddingHorizontal:spacing.lg,paddingTop:spacing.md,paddingBottom:12,flexDirection:'row',justifyContent:'space-between',alignItems:'flex-end'}}>
       <View>
         <Text style={[type.label,{marginBottom:2}]}>Discover</Text>
-        <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text}}>Verso</Text>
+        <Text style={{fontFamily:fonts.serifItalic,fontSize:30,lineHeight:40,color:colors.text}}>Verso</Text>
       </View>
       <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:15,paddingVertical:9,backgroundColor:colors.accent,borderRadius:radius.pill,...shadow.soft}}>
         <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accentText}}>+ Add Book</Text>
@@ -80,18 +92,17 @@ export default function DiscoverScreen(){
         placeholder="Search title, author, ISBN…" placeholderTextColor={colors.text3} value={q} onChangeText={setQ} autoCapitalize="none" autoCorrect={false}/>
     </View>
     {/* Pill sub-nav */}
-    {!searching&&<ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,height:56}} contentContainerStyle={{paddingHorizontal:spacing.lg,gap:8,alignItems:'center'}}>
-      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{paddingHorizontal:16,paddingVertical:9,borderRadius:radius.pill,backgroundColor:sub===s?colors.accent:colors.surface,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
+    {!searching&&<View style={{flexDirection:'row',gap:8,paddingHorizontal:spacing.lg,paddingVertical:8}}>
+      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{flex:1,paddingVertical:9,borderRadius:radius.pill,alignItems:'center',backgroundColor:sub===s?colors.accent:colors.surface,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
         <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.accentText:colors.text2}}>{s}</Text>
       </TouchableOpacity>)}
-    </ScrollView>}
+    </View>}
 
     <ScrollView showsVerticalScrollIndicator={false}>
       {/* SEARCH RESULTS override */}
       {searching?<View>
         <Text style={[type.label,{padding:spacing.lg,paddingBottom:8}]}>{results.length} result{results.length!==1?'s':''}</Text>
         {results.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>★ {b.avgRating||'—'}{BOOK_VIBES[b.id]?` · ${BOOK_VIBES[b.id].pace}`:''}</Text>}/>)}
-        {/* Add-from-search: always offer when searching, prominent when nothing matches */}
         <TouchableOpacity onPress={()=>{setAddPrefill(q.trim());setShowAdd(true);}} style={{margin:spacing.lg,padding:14,borderWidth:1,borderColor:colors.accent,backgroundColor:colors.accentDim,alignItems:'center',borderRadius:12}}>
           <Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:colors.accent}}>{results.length?'Not the right one? ':''}Add "{q.trim()}" to Verso →</Text>
         </TouchableOpacity>
@@ -100,34 +111,60 @@ export default function DiscoverScreen(){
 
       {/* FOR YOU */}
       {sub==='For You'&&<View style={{paddingTop:spacing.xs}}>
-        {reading.length>0&&<View style={{marginBottom:spacing.xs}}>
-          <Text style={[type.label,{paddingHorizontal:spacing.lg,paddingBottom:10}]}>Currently Reading</Text>
-          {reading.map(b=>{const j=journal[b.id];const total=PAGE_COUNTS[b.id]||b.pages||300;const pct=j?Math.min(100,Math.round(j.page/total*100)):0;
-            return <TouchableOpacity key={b.id} onPress={()=>setDetailId(b.id)} style={{flexDirection:'row',padding:14,gap:14,backgroundColor:colors.surface,borderRadius:radius.lg,marginHorizontal:spacing.lg,marginBottom:10,...shadow.soft}} activeOpacity={0.8}>
-              <BookCover bookId={b.id} size="sm"/>
-              <View style={{flex:1,justifyContent:'center'}}>
-                <Text style={{fontFamily:fonts.serifBold,fontSize:16,color:colors.text,marginBottom:3}}>{b.title}</Text>
-                <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginBottom:8}}>{b.author}</Text>
-                <View style={{height:5,borderRadius:radius.pill,backgroundColor:colors.surface2,overflow:'hidden'}}><View style={{height:5,borderRadius:radius.pill,backgroundColor:colors.accent,width:`${pct}%` as any}}/></View>
-                <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3,marginTop:5}}>{j?`p.${j.page}`:'not started'} · {pct}%</Text>
-              </View>
-            </TouchableOpacity>;})}
+        {/* Recommended for you — the centerpiece, driven by your likes */}
+        {recs.length>0&&<View style={{marginBottom:spacing.sm}}>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingBottom:10}}>
+            <Text style={[type.label]}>Recommended for you</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>from your likes</Text>
+          </View>
+          {recs.slice(0,5).map(r=>{const seed=allBooks.find(x=>x.id===r.reasonId);
+            return <Row key={r.id} id={r.id} extra={seed?<Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent,marginTop:4}}>Because you loved {seed.title}</Text>:undefined}/>;})}
         </View>}
+
+        {/* Book Swipe — feeds the recs above */}
         <TouchableOpacity style={card} activeOpacity={0.85} onPress={()=>setShowSwipe(true)}>
           <View style={{flex:1}}>
-            <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:pastelText.sky,marginBottom:3}}>{allBooks.filter(b=>!shelf[b.id]).length} books awaiting your verdict</Text>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:pastelText.sky,opacity:0.8}}>Book Tinder · build your taste profile</Text>
+            <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:pastelText.sky,marginBottom:3}}>{allBooks.filter(b=>!swipeData[b.id]&&!shelf[b.id]).length} books to react to</Text>
+            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:pastelText.sky,opacity:0.8}}>Book Swipe · the more you swipe, the better these get</Text>
           </View>
           <Text style={{fontSize:20,color:pastelText.sky}}>→</Text>
         </TouchableOpacity>
-        <Text style={[type.label,{paddingHorizontal:spacing.lg,paddingTop:spacing.lg,paddingBottom:10}]}>Picked by Editors</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingBottom:8}}>
-          {BOOKS.slice(0,6).map(b=><TouchableOpacity key={b.id} style={{width:110,marginRight:14}} activeOpacity={0.8} onPress={()=>setDetailId(b.id)}>
-            <BookCover bookId={b.id} size="md"/>
-            <Text style={{fontFamily:fonts.serifItalic,fontSize:13,color:colors.text,marginTop:7,marginBottom:2}} numberOfLines={2}>{b.title}</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{b.author}</Text>
-          </TouchableOpacity>)}
-        </ScrollView>
+
+        {/* Your taste-twins loved */}
+        {feed.length>0&&<View style={{marginTop:spacing.md}}>
+          <Text style={[type.label,{paddingHorizontal:spacing.lg,paddingBottom:10}]}>Your Taste-Twins Loved</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingRight:spacing.sm}}>
+            {feed.slice(0,8).map(({bookId,friend,r})=><PosterCard key={bookId+friend.id} id={bookId}
+              caption={<View style={{flexDirection:'row',alignItems:'center',gap:5,marginTop:6}}>
+                <View style={{width:16,height:16,borderRadius:8,backgroundColor:friend.color+'28',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:8,color:friend.color}}>{friend.init}</Text></View>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:9,color:colors.accent}}>{friend.name.split(' ')[0]} · {r}★</Text>
+              </View>}/>)}
+          </ScrollView>
+        </View>}
+
+        {/* Trending this week */}
+        <View style={{marginTop:spacing.lg}}>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingHorizontal:spacing.lg,paddingBottom:10}}>
+            <Text style={[type.label]}>Trending This Week</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>on Verso</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingRight:spacing.sm}}>
+            {trending.map(b=><PosterCard key={b.id} id={b.id}
+              caption={<Text style={{fontFamily:fonts.sansMedium,fontSize:9,color:colors.accent,marginTop:6}}>↑ {BOOK_VIBES[b.id].weekly>=1000?(BOOK_VIBES[b.id].weekly/1000).toFixed(1)+'k':BOOK_VIBES[b.id].weekly} readers</Text>}/>)}
+          </ScrollView>
+        </View>
+
+        {/* Picked by editors */}
+        <View style={{marginTop:spacing.lg}}>
+          <Text style={[type.label,{paddingHorizontal:spacing.lg,paddingBottom:10}]}>Picked by Editors</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{paddingLeft:spacing.lg,paddingRight:spacing.sm,paddingBottom:8}}>
+            {BOOKS.slice(0,6).map(b=><TouchableOpacity key={b.id} style={{width:110,marginRight:14}} activeOpacity={0.8} onPress={()=>setDetailId(b.id)}>
+              <BookCover bookId={b.id} size="md"/>
+              <Text style={{fontFamily:fonts.serifItalic,fontSize:13,color:colors.text,marginTop:7,marginBottom:2}} numberOfLines={2}>{b.title}</Text>
+              <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{b.author}</Text>
+            </TouchableOpacity>)}
+          </ScrollView>
+        </View>
         <View style={{height:24}}/>
       </View>}
 
@@ -150,46 +187,6 @@ export default function DiscoverScreen(){
           <Text style={[type.label,{paddingHorizontal:spacing.lg,marginBottom:4}]}>{moodMatches.length} books match</Text>
           {moodMatches.map(b=><Row key={b.id} id={b.id} extra={<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:3}}>{BOOK_VIBES[b.id].moods.join(' · ')} · {BOOK_VIBES[b.id].pace}</Text>}/>)}
         </View>:<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.xl}}>Tell us how you want to feel tonight.</Text>}
-      </View>}
-
-      {/* ZEITGEIST */}
-      {sub==='Zeitgeist'&&<View>
-        <View style={{flexDirection:'row',gap:8,padding:spacing.lg,paddingBottom:8}}>
-          {([['trending','Trending this week'],['new','New releases']] as const).map(([k,l])=><TouchableOpacity key={k} onPress={()=>setZTab(k)}
-            style={{paddingHorizontal:12,paddingVertical:7,backgroundColor:zTab===k?colors.accentDim:colors.surface,borderWidth:1,borderColor:zTab===k?colors.accent:colors.border,borderRadius:999}}>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:zTab===k?colors.accent:colors.text3}}>{l}</Text>
-          </TouchableOpacity>)}
-        </View>
-        {(zTab==='trending'?trending:newReleases).map((b,i)=><TouchableOpacity key={b.id} onPress={()=>setDetailId(b.id)} activeOpacity={0.8}
-          style={{flexDirection:'row',gap:14,padding:14,marginHorizontal:spacing.lg,marginBottom:10,backgroundColor:colors.surface,borderRadius:radius.lg,alignItems:'center',...shadow.soft}}>
-          <Text style={{fontFamily:fonts.serifBold,fontSize:20,color:i<3?colors.accent:colors.text3,width:26,textAlign:'center'}}>{i+1}</Text>
-          <View style={{flex:1}}>
-            <Text style={{fontFamily:fonts.serifBold,fontSize:16,color:colors.text}} numberOfLines={1}>{b.title}</Text>
-            <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>{b.author}</Text>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent,marginTop:4}}>{zTab==='trending'?`${BOOK_VIBES[b.id]?.weekly.toLocaleString()||'—'} readers this week`:b.year}</Text>
-          </View>
-        </TouchableOpacity>)}
-        <View style={{height:24}}/>
-      </View>}
-
-      {/* MATCHES — taste match feed */}
-      {sub==='Matches'&&<View>
-        <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,padding:spacing.lg,paddingBottom:8}}>Books your taste-twins loved</Text>
-        {feed.map(({bookId,friend,r},i)=>{const b=allBooks.find(x=>x.id===bookId);if(!b)return null;
-          return <TouchableOpacity key={bookId+friend.id+i} onPress={()=>setDetailId(bookId)} activeOpacity={0.8}
-            style={{flexDirection:'row',gap:14,padding:14,marginHorizontal:spacing.lg,marginBottom:10,backgroundColor:colors.surface,borderRadius:radius.lg,...shadow.soft}}>
-            <BookCover bookId={bookId} size="sm"/>
-            <View style={{flex:1,justifyContent:'center'}}>
-              <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text}} numberOfLines={1}>{b.title}</Text>
-              <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginTop:1}}>{b.author}</Text>
-              <View style={{flexDirection:'row',alignItems:'center',gap:6,marginTop:5}}>
-                <View style={{width:20,height:20,borderRadius:10,backgroundColor:friend.color+'24',alignItems:'center',justifyContent:'center'}}><Text style={{fontFamily:fonts.sansBold,fontSize:9,color:friend.color}}>{friend.init}</Text></View>
-                <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2}}>{friend.name.split(' ')[0]} ({friend.match}% match) gave this {'★'.repeat(r)}</Text>
-              </View>
-            </View>
-          </TouchableOpacity>;})}
-        {feed.length===0&&<Text style={{fontFamily:fonts.serif,fontStyle:'italic',fontSize:13,color:colors.text3,textAlign:'center',padding:spacing.xl}}>Your taste-twins have run out of recommendations. Suspicious.</Text>}
-        <View style={{height:24}}/>
       </View>}
       </>}
     </ScrollView>

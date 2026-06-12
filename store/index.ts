@@ -10,11 +10,14 @@ export interface UserClub { id:string; name:string; bookId:string; }
 export interface UserChallenge { id:string; title:string; desc:string; goal:number; }
 export interface JournalEntry { date:string;page:number;note:string; }
 export interface JournalData  { page:number;entries:JournalEntry[]; }
+// One row per swipe decision — the raw taste-signal log for the future
+// recommendation backend. `synced` flips true once a row is uploaded.
+export interface SwipeEvent { bookId:string; action:'like'|'dislike'|'next'; ts:number; synced:boolean; }
 interface State {
   shelf:Record<string,ShelfStatus>; ratings:Record<string,number>; formats:Record<string,Format>;
   rereads:Record<string,RereadEntry[]>; journal:Record<string,JournalData>; userTags:Record<string,string[]>;
   customBooks:Book[]; follows:Record<string,boolean>; challengeJoined:Record<string,boolean>;
-  swipeData:Record<string,'like'|'dislike'|'next'>; eloRatings:Record<string,number>; streakDays:string[];
+  swipeData:Record<string,'like'|'dislike'|'next'>; swipeEvents:SwipeEvent[]; eloRatings:Record<string,number>; streakDays:string[];
   clubMessages:Record<string,{user:string;text:string;ts:string}[]>;
   reviews:Record<string,Review>;
   buddyReads:BuddyRead[];
@@ -28,6 +31,8 @@ interface State {
   userChallenges:UserChallenge[];
   statsHidden:Record<string,boolean>;
   setShelf:(id:string,s:ShelfStatus|null)=>void;
+  recordSwipe:(bookId:string,action:'like'|'dislike'|'next')=>void;
+  markSwipesSynced:(upToTs:number)=>void;
   setRating:(id:string,v:number)=>void;
   setFormat:(id:string,f:Format|null)=>void;
   addCustomBook:(b:Book)=>void;
@@ -70,13 +75,21 @@ export const useStore = create<State>()(persist((set)=>({
   ratings:{stoner:4.5}, formats:{}, rereads:{},
   journal:{'remains-of-the-day':{page:184,entries:[{date:'Jun 6',page:48,note:"Stevens is already insufferable."},{date:'Jun 7',page:112,note:"The repression is doing something to me."},{date:'Jun 8',page:184,note:"I am not okay."}]}},
   userTags:{}, customBooks:[], follows:{}, challengeJoined:{'literary-dozen':true},
-  swipeData:{}, eloRatings:{}, streakDays:['May 28','May 29','May 30','Jun 1','Jun 2','Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8'], clubMessages:{}, reviews:{},
+  swipeData:{}, swipeEvents:[], eloRatings:{}, streakDays:['May 28','May 29','May 30','Jun 1','Jun 2','Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8'], clubMessages:{}, reviews:{},
   buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
   favorites:['stoner','remains-of-the-day','pachinko'],
   dnfReasons:{}, annualGoal:30, authorFollows:{'Sally Rooney':true,'Kazuo Ishiguro':true}, bookMoods:{},
   lists:[{id:'comfort',name:'Comfort Re-reads',desc:'For when the world is too much.',bookIds:['stoner','remains-of-the-day','gilead']},{id:'gut-punch',name:'Books That Wrecked Me',desc:'Read at your own risk.',bookIds:['a-little-life','never-let-me-go','beloved']}],
   userClubs:[], userChallenges:[], statsHidden:{},
   setShelf:(id,s)=>set(st=>{ const sh={...st.shelf}; if(s===null) delete sh[id]; else sh[id]=s; return {shelf:sh}; }),
+  // Taste-signal capture. swipeData keeps the latest verdict per book (drives the queue);
+  // swipeEvents is the append-only log a backend will drain — POST rows where !synced,
+  // then call markSwipesSynced(lastTs) on success.
+  recordSwipe:(bookId,action)=>set(st=>({
+    swipeData:{...st.swipeData,[bookId]:action},
+    swipeEvents:[...(st.swipeEvents||[]),{bookId,action,ts:Date.now(),synced:false}],
+  })),
+  markSwipesSynced:(upToTs)=>set(st=>({swipeEvents:(st.swipeEvents||[]).map(e=>e.ts<=upToTs?{...e,synced:true}:e)})),
   setRating:(id,v)=>set(st=>({ratings:{...st.ratings,[id]:v}})),
   setFormat:(id,f)=>set(st=>{ const fm={...st.formats}; if(f===null) delete fm[id]; else fm[id]=f; return {formats:fm}; }),
   addCustomBook:(b)=>set(st=>({customBooks:[...st.customBooks,b]})),
