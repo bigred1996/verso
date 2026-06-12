@@ -1,4 +1,4 @@
-import React,{useState,useRef,useEffect} from 'react';
+import React,{useState,useRef,useEffect,useLayoutEffect} from 'react';
 import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,PanResponder,Dimensions,Platform,Easing} from 'react-native';
 import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../constants/theme';
 import {BOOKS,BOOK_VIBES} from '../data/books';
@@ -52,33 +52,19 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const pool=n>=2?[allBooks[i1],allBooks[i2]]:[];
 
   // ── Drag animation ──
+  // PanResponder is a JS-thread gesture, so pan must stay useNativeDriver:false.
+  // To keep the drag smooth we minimise per-frame work: only the transforms and
+  // stamp opacities below are driven by pan — no extra listeners, no animated
+  // glow rings, and the deck behind is static (see JSX).
   const pan=useRef(new Animated.ValueXY()).current;
   const rotate=pan.x.interpolate({inputRange:[-250,0,250],outputRange:['-14deg','0deg','14deg']});
   const likeOpacity=pan.x.interpolate({inputRange:[30,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
   const nopeOpacity=pan.x.interpolate({inputRange:[-FLING_X,-30],outputRange:[1,0],extrapolate:'clamp'});
   const laterOpacity=pan.y.interpolate({inputRange:[-FLING_Y,-30],outputRange:[1,0],extrapolate:'clamp'});
-  // The card behind grows toward full size as you drag the top card away.
-  const nextScale=pan.x.interpolate({inputRange:[-200,0,200],outputRange:[1,0.95,1],extrapolate:'clamp'});
-  const nextLift=pan.x.interpolate({inputRange:[-200,0,200],outputRange:[0,-11,0],extrapolate:'clamp'});
-  const glowLike=pan.x.interpolate({inputRange:[0,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
-  const glowNope=pan.x.interpolate({inputRange:[-FLING_X,0],outputRange:[1,0],extrapolate:'clamp'});
 
-  // Light haptic tick the moment a drag crosses a commit threshold — so you
-  // feel the card "arm" before you let go. Re-arms once you fall back under.
-  const armed=useRef<{x:boolean;y:boolean}>({x:false,y:false});
-  useEffect(()=>{
-    const onX=pan.x.addListener(({value})=>{
-      const past=Math.abs(value)>FLING_X;
-      if(past&&!armed.current.x){ armed.current.x=true; tick(); }
-      else if(!past&&armed.current.x){ armed.current.x=false; }
-    });
-    const onY=pan.y.addListener(({value})=>{
-      const past=value<-FLING_Y;
-      if(past&&!armed.current.y){ armed.current.y=true; tick(); }
-      else if(!past&&armed.current.y){ armed.current.y=false; }
-    });
-    return ()=>{ pan.x.removeListener(onX); pan.y.removeListener(onY); };
-  },[]);
+  // Reset the card to centre the instant a new book becomes current — before
+  // paint — so the outgoing card never flashes back after flinging off-screen.
+  useLayoutEffect(()=>{ pan.setValue({x:0,y:0}); },[cur?.id]);
 
   // ── Pop confirmation + counter bounce ──
   const popV=useRef(new Animated.Value(0)).current;
@@ -126,25 +112,26 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     setPopAction(action);
     popV.setValue(0);
     Animated.sequence([
-      Animated.spring(popV,{toValue:1,friction:5,tension:120,useNativeDriver:false}),
+      Animated.spring(popV,{toValue:1,friction:5,tension:120,useNativeDriver:true}),
       Animated.delay(420),
-      Animated.timing(popV,{toValue:0,duration:240,useNativeDriver:false}),
+      Animated.timing(popV,{toValue:0,duration:240,useNativeDriver:true}),
     ]).start(()=>setPopAction(null));
     setSessionCount(c=>c+1);
     countV.setValue(0.6);
-    Animated.spring(countV,{toValue:1,friction:4,useNativeDriver:false}).start();
+    Animated.spring(countV,{toValue:1,friction:4,useNativeDriver:true}).start();
     if(action==='like'){
       confV.setValue(0);
       setBursting(true);
-      Animated.timing(confV,{toValue:1,duration:680,easing:Easing.out(Easing.quad),useNativeDriver:false}).start(()=>setBursting(false));
+      Animated.timing(confV,{toValue:1,duration:680,easing:Easing.out(Easing.quad),useNativeDriver:true}).start(()=>setBursting(false));
     }
   }
 
   function commitSwipe(action:Action){
     if(!cur) return;
+    // recordSwipe advances the queue → useLayoutEffect re-centres pan before
+    // paint, so we must NOT reset pan here (that would snap the old card back).
     recordSwipe(cur.id,action);
     celebrate(action);
-    pan.setValue({x:0,y:0});
   }
   function flingOut(action:Action){
     const toX=action==='like'?SCREEN_W+120:action==='dislike'?-(SCREEN_W+120):0;
@@ -249,22 +236,19 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
           {/* card zone — the cover deck dominates */}
           <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
             <View style={{width:COVER_W,alignItems:'center'}}>
-              {/* deck behind — depth */}
-              {next2&&<View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:-22},{scale:0.9}],opacity:0.45}}>
-                <BookCover bookId={next2.id} size="lg" style={{...coverStyle,...shadow.soft}}/>
+              {/* deck behind — static (no per-frame animation) gives depth cheaply */}
+              {next2&&<View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:-22},{scale:0.9}],opacity:0.4}}>
+                <BookCover bookId={next2.id} size="lg" style={coverStyle}/>
               </View>}
-              {next&&<Animated.View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:nextLift},{scale:nextScale}],opacity:0.8}}>
-                <BookCover bookId={next.id} size="lg" style={{...coverStyle,...shadow.soft}}/>
-              </Animated.View>}
+              {next&&<View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:-11},{scale:0.95}],opacity:0.75}}>
+                <BookCover bookId={next.id} size="lg" style={coverStyle}/>
+              </View>}
 
               {/* active draggable card */}
               <Animated.View ref={cardRef} {...panHandlers}
                 style={{alignItems:'center',transform:[{translateX:pan.x},{translateY:pan.y},{rotate}],cursor:'grab',touchAction:'none'} as any}>
                 <TouchableOpacity activeOpacity={0.94} onPress={tapToOpen}>
-                  <View style={{borderRadius:radius.md,...shadow.card}}>
-                    {/* glow ring tinted by drag direction */}
-                    <Animated.View pointerEvents="none" style={{position:'absolute',top:-3,left:-3,right:-3,bottom:-3,borderRadius:radius.md+3,borderWidth:3,borderColor:colors.accent,opacity:glowLike,zIndex:2}}/>
-                    <Animated.View pointerEvents="none" style={{position:'absolute',top:-3,left:-3,right:-3,bottom:-3,borderRadius:radius.md+3,borderWidth:3,borderColor:colors.danger,opacity:glowNope,zIndex:2}}/>
+                  <View style={{borderRadius:radius.md}}>
                     <BookCover bookId={cur.id} size="lg" style={coverStyle}/>
                     {/* verdict stamps */}
                     <Animated.View style={{position:'absolute',top:16,left:14,opacity:likeOpacity,borderWidth:3,borderColor:colors.accent,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'-14deg'}],backgroundColor:'rgba(79,122,91,0.22)'}}>
