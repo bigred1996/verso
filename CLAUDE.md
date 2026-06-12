@@ -29,6 +29,25 @@ There are no tests or lint config — type-checking is the only automated gate.
 - RN-web `TouchableOpacity`/`Pressable` `onPress` does **not** reliably fire from a synthetic `MouseEvent('click')` in `preview_eval` (segmented pills work; the Book Swipe trigger and drag cards do not). Verify those by reading state/DOM, not by simulating taps.
 - `type.label` and other `textTransform:'uppercase'` text returns **uppercased** from `innerText` in Chrome — match case-insensitively in assertions.
 
+### Native iOS build (on physical device "Big Red")
+
+The web preview is for fast JS iteration; real device testing uses a **Debug build** that loads JS live from Metro. Two rules decide your workflow:
+- **JS-only change → FREE.** Don't rebuild. Start Metro (`npx expo start --lan --port 8081`), the device's installed Debug build pulls the new bundle on shake → Reload.
+- **Native change (add/remove/bump a native module, plugin, Info.plist) → rebuild required.** A native module that isn't in the installed binary will **dyld-crash on launch before any JS runs** — reverting the JS won't fix it; you must rebuild without it.
+
+```bash
+# Device build — the LANG/LC_ALL are MANDATORY (see below). Device "Big Red":
+LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 npx expo run:ios --device 00008120-000674162EF8C01E
+```
+
+Build gotchas (all hit repeatedly — don't re-derive):
+- **CocoaPods `Encoding::CompatibilityError` (ASCII-8BIT).** The shell locale is `C`/empty, which makes `pod install` crash on the space in the path. **Always set `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`** for any `expo run:ios` / `pod install`.
+- **Space in the path** (`/Documents/Claude Code/`) breaks unquoted Xcode/CocoaPods scripts. Durable fixes already in-repo (auto-reapplied via `postinstall` → patch-package): `patches/expo-constants+*.patch`, `patches/react-native+*.patch`, the `ios/Podfile` post_install hook, and `ENABLE_USER_SCRIPT_SANDBOXING=NO` in the xcodeproj. Don't remove these.
+- **Data volume runs near-full** (~99%). A native build needs ~8–10 GB headroom. Safe reclaim: `~/Library/Developer/Xcode/iOS DeviceSupport` (re-extracts on connect), `npm cache clean --force`, Verso's DerivedData. **Never touch `~/.cache/lm-studio`** (the user's LM Studio models).
+- **Native-module ABI skew is silent until launch.** Expo's Swift modules (`ExpoModulesCore`, etc.) ship as **prebuilt xcframeworks** and are **not ABI-stable across patch versions**. A module built against a different `expo-modules-core` than the one installed → `dyld: Symbol not found` → SIGABRT on launch. This project currently runs `expo-modules-core@56.0.15`; **`expo-image@56.0.11` is incompatible with it and must not be re-added** without a full SDK alignment first. Diagnose with `nm -u <consumer>` (referenced) vs `nm <framework>` (exported) on the `ios-arm64` slice.
+- **`expo install --fix` is not free here** — it wants to downgrade `@react-native-async-storage/async-storage` 3.1.1→2.2.0, which the persisted store depends on. Align versions deliberately on a branch with device testing, not as a quick fix.
+- Capture a launch crash with `xcrun devicectl device process launch --console --terminate-existing --device <UDID> com.codymcmullen.verso`.
+
 ## Architecture
 
 ### App Structure
