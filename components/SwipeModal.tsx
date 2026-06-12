@@ -1,6 +1,5 @@
 import React,{useState,useRef,useEffect,useLayoutEffect} from 'react';
-import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions} from 'react-native';
-import {Image as ExpoImage} from 'expo-image';
+import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions,Image} from 'react-native';
 import Reanimated,{useSharedValue,useAnimatedStyle,withSpring,withTiming,runOnJS,interpolate,Extrapolation} from 'react-native-reanimated';
 import {Gesture,GestureDetector,GestureHandlerRootView} from 'react-native-gesture-handler';
 import {colors,spacing,fonts,radius,shadow} from '../constants/theme';
@@ -63,7 +62,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     const ahead=mode==='swipe'
       ? queue.slice(0,10)
       : Array.from({length:10},(_,k)=>allBooks[(pairIdx*2+k)%Math.max(1,n)]);
-    ahead.forEach(b=>{ if(!b) return; const u=coverUri(b.id,b.olCoverId); if(u) try{ ExpoImage.prefetch(u,{cachePolicy:'memory-disk'})?.catch?.(()=>{}); }catch{} });
+    ahead.forEach(b=>{ if(!b) return; const u=coverUri(b.id,b.olCoverId); if(u&&Image.prefetch) try{ Image.prefetch(u)?.catch?.(()=>{}); }catch{} });
   },[mode,cur?.id,pairIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Drag (UI-thread: react-native-gesture-handler + Reanimated) ──
