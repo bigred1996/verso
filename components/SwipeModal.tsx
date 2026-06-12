@@ -1,11 +1,11 @@
-import React,{useState,useRef,useLayoutEffect} from 'react';
-import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions} from 'react-native';
+import React,{useState,useRef,useEffect,useLayoutEffect} from 'react';
+import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions,Image} from 'react-native';
 import Reanimated,{useSharedValue,useAnimatedStyle,withSpring,withTiming,runOnJS,interpolate,Extrapolation} from 'react-native-reanimated';
 import {Gesture,GestureDetector,GestureHandlerRootView} from 'react-native-gesture-handler';
 import {colors,spacing,fonts,radius,shadow} from '../constants/theme';
 import {BOOKS,BOOK_VIBES} from '../data/books';
 import {useStore} from '../store';
-import BookCover from './BookCover';
+import BookCover,{coverUri} from './BookCover';
 import {tick,impact,notify} from '../utils/haptics';
 
 const {width:SCREEN_W,height:SCREEN_H}=Dimensions.get('window');
@@ -52,6 +52,16 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const n=allBooks.length;
   const i1=(pairIdx*2)%n; let i2=(pairIdx*2+1)%n; if(i2===i1) i2=(i2+1)%n;
   const pool=n>=2?[allBooks[i1],allBooks[i2]]:[];
+
+  // Covers are remote Open Library images. Warm the cache well ahead of what's
+  // on screen — the next several queued books (Swipe) or upcoming pairs
+  // (Versus) — so a cover is decoded and ready the instant its card appears.
+  useEffect(()=>{
+    const ahead=mode==='swipe'
+      ? queue.slice(0,10)
+      : Array.from({length:10},(_,k)=>allBooks[(pairIdx*2+k)%Math.max(1,n)]);
+    ahead.forEach(b=>{ if(!b) return; const u=coverUri(b.id,b.olCoverId); if(u&&Image.prefetch) try{ Image.prefetch(u)?.catch?.(()=>{}); }catch{} });
+  },[mode,cur?.id,pairIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Drag (UI-thread: react-native-gesture-handler + Reanimated) ──
   // tx/ty are the card's live offset, driven entirely on the UI thread, so the
