@@ -1,5 +1,7 @@
-import React,{useState,useRef,useEffect,useLayoutEffect} from 'react';
-import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,PanResponder,Dimensions,Platform,Easing} from 'react-native';
+import React,{useState,useRef,useLayoutEffect} from 'react';
+import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions,Easing} from 'react-native';
+import Reanimated,{useSharedValue,useAnimatedStyle,withSpring,withTiming,runOnJS,interpolate,Extrapolation} from 'react-native-reanimated';
+import {Gesture,GestureDetector,GestureHandlerRootView} from 'react-native-gesture-handler';
 import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../constants/theme';
 import {BOOKS,BOOK_VIBES} from '../data/books';
 import {useStore} from '../store';
@@ -51,20 +53,28 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const i1=(pairIdx*2)%n; let i2=(pairIdx*2+1)%n; if(i2===i1) i2=(i2+1)%n;
   const pool=n>=2?[allBooks[i1],allBooks[i2]]:[];
 
-  // ── Drag animation ──
-  // PanResponder is a JS-thread gesture, so pan must stay useNativeDriver:false.
-  // To keep the drag smooth we minimise per-frame work: only the transforms and
-  // stamp opacities below are driven by pan — no extra listeners, no animated
-  // glow rings, and the deck behind is static (see JSX).
-  const pan=useRef(new Animated.ValueXY()).current;
-  const rotate=pan.x.interpolate({inputRange:[-250,0,250],outputRange:['-14deg','0deg','14deg']});
-  const likeOpacity=pan.x.interpolate({inputRange:[30,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
-  const nopeOpacity=pan.x.interpolate({inputRange:[-FLING_X,-30],outputRange:[1,0],extrapolate:'clamp'});
-  const laterOpacity=pan.y.interpolate({inputRange:[-FLING_Y,-30],outputRange:[1,0],extrapolate:'clamp'});
+  // ── Drag (UI-thread: react-native-gesture-handler + Reanimated) ──
+  // tx/ty are the card's live offset, driven entirely on the UI thread, so the
+  // drag stays smooth even in a debug build. armed* gate the threshold haptic.
+  const tx=useSharedValue(0);
+  const ty=useSharedValue(0);
+  const armedX=useSharedValue(false);
+  const armedY=useSharedValue(false);
 
-  // Reset the card to centre the instant a new book becomes current — before
-  // paint — so the outgoing card never flashes back after flinging off-screen.
-  useLayoutEffect(()=>{ pan.setValue({x:0,y:0}); },[cur?.id]);
+  const cardStyle=useAnimatedStyle(()=>({
+    transform:[
+      {translateX:tx.value},
+      {translateY:ty.value},
+      {rotate:`${interpolate(tx.value,[-250,0,250],[-14,0,14],Extrapolation.CLAMP)}deg`},
+    ],
+  }));
+  const yesStyle=useAnimatedStyle(()=>({opacity:interpolate(tx.value,[30,FLING_X],[0,1],Extrapolation.CLAMP)}));
+  const nopeStyle=useAnimatedStyle(()=>({opacity:interpolate(tx.value,[-FLING_X,-30],[1,0],Extrapolation.CLAMP)}));
+  const skipStyle=useAnimatedStyle(()=>({opacity:interpolate(ty.value,[-FLING_Y,-30],[1,0],Extrapolation.CLAMP)}));
+
+  // Re-centre instantly when a new book becomes current (after a fling), before
+  // paint — so the outgoing card never flashes back to centre.
+  useLayoutEffect(()=>{ tx.value=0; ty.value=0; },[cur?.id]);
 
   // ── Pop confirmation + counter bounce ──
   const popV=useRef(new Animated.Value(0)).current;
@@ -133,54 +143,42 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     recordSwipe(cur.id,action);
     celebrate(action);
   }
-  function flingOut(action:Action){
-    const toX=action==='like'?SCREEN_W+120:action==='dislike'?-(SCREEN_W+120):0;
-    const toY=action==='next'?-700:60;
-    Animated.timing(pan,{toValue:{x:toX,y:toY},duration:220,useNativeDriver:false}).start(()=>commitSwipe(action));
+  // Fling the card off-screen, then commit on the JS thread once it's gone.
+  // Callable from the gesture (via runOnJS) and from the action buttons.
+  function doFling(action:Action){
+    const toX=action==='like'?SCREEN_W+140:action==='dislike'?-(SCREEN_W+140):0;
+    const toY=action==='next'?-(SCREEN_H+140):60;
+    tx.value=withTiming(toX,{duration:200});
+    ty.value=withTiming(toY,{duration:200},(finished)=>{ if(finished) runOnJS(commitSwipe)(action); });
   }
-  // dx/dy = how far the card moved; vx/vy = release velocity. A fast flick
-  // commits even when the card hasn't travelled past the distance threshold,
-  // so the gesture feels responsive instead of requiring a long drag.
-  function settleRelease(dx:number,dy:number,vx=0,vy=0){
-    const fastX=Math.abs(vx)>0.4, fastUp=vy<-0.4;
-    if(dx>FLING_X||(fastX&&vx>0&&dx>40)) flingOut('like');
-    else if(dx<-FLING_X||(fastX&&vx<0&&dx<-40)) flingOut('dislike');
-    else if(dy<-FLING_Y||(fastUp&&dy<-40)) flingOut('next');
-    else Animated.spring(pan,{toValue:{x:0,y:0},friction:5,useNativeDriver:false}).start();
-  }
+  function openCur(){ if(cur) onOpenBook(cur.id); }
 
-  const responder=useRef(PanResponder.create({
-    onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>6||Math.abs(g.dy)>6,
-    onPanResponderMove:Animated.event([null,{dx:pan.x,dy:pan.y}],{useNativeDriver:false}),
-    onPanResponderRelease:(_,g)=>settleRelease(g.dx,g.dy,g.vx,g.vy),
-  })).current;
-  const panHandlers=Platform.OS==='web'?{}:responder.panHandlers;
-  // On native a pure tap (no drag) opens the book; a drag is claimed by the
-  // PanResponder above and cancels this press. Web handles tap in its own
-  // pointerup listener, so leave it undefined there to avoid double-firing.
-  const tapToOpen=Platform.OS==='web'?undefined:()=>{ if(cur) onOpenBook(cur.id); };
-
-  // Web: direct pointer listeners; small movement = tap → open the book page
-  const cardRef=useRef<any>(null);
-  const releaseRef=useRef(settleRelease); releaseRef.current=settleRelease;
-  const openRef=useRef(onOpenBook); openRef.current=onOpenBook;
-  const curIdRef=useRef(cur?.id); curIdRef.current=cur?.id;
-  useEffect(()=>{
-    if(Platform.OS!=='web') return;
-    const node=cardRef.current as any;
-    if(!node||!node.addEventListener) return;
-    let sx=0,sy=0,dragging=false;
-    const down=(e:PointerEvent)=>{dragging=true;sx=e.clientX;sy=e.clientY;try{node.setPointerCapture?.(e.pointerId);}catch{}};
-    const move=(e:PointerEvent)=>{if(!dragging)return;pan.setValue({x:e.clientX-sx,y:e.clientY-sy});};
-    const up=(e:PointerEvent)=>{if(!dragging)return;dragging=false;const dx=e.clientX-sx,dy=e.clientY-sy;
-      if(Math.abs(dx)<6&&Math.abs(dy)<6){ pan.setValue({x:0,y:0}); if(curIdRef.current) openRef.current(curIdRef.current); }
-      else releaseRef.current(dx,dy);};
-    node.addEventListener('pointerdown',down);
-    node.addEventListener('pointermove',move);
-    node.addEventListener('pointerup',up);
-    node.addEventListener('pointercancel',up);
-    return ()=>{node.removeEventListener('pointerdown',down);node.removeEventListener('pointermove',move);node.removeEventListener('pointerup',up);node.removeEventListener('pointercancel',up);};
-  },[cur?.id]);
+  // Pan runs entirely on the UI thread. activeOffset means a small move is NOT
+  // a drag, so the Tap gesture (open the book) wins for taps. vx/vy are px/s.
+  const panGesture=Gesture.Pan()
+    .activeOffsetX([-12,12]).activeOffsetY([-12,12])
+    .onUpdate((e)=>{
+      'worklet';
+      tx.value=e.translationX; ty.value=e.translationY;
+      const pastX=Math.abs(e.translationX)>FLING_X;
+      if(pastX&&!armedX.value){ armedX.value=true; runOnJS(tick)(); }
+      else if(!pastX&&armedX.value){ armedX.value=false; }
+      const pastY=e.translationY<-FLING_Y;
+      if(pastY&&!armedY.value){ armedY.value=true; runOnJS(tick)(); }
+      else if(!pastY&&armedY.value){ armedY.value=false; }
+    })
+    .onEnd((e)=>{
+      'worklet';
+      armedX.value=false; armedY.value=false;
+      const dx=e.translationX,dy=e.translationY,vx=e.velocityX,vy=e.velocityY;
+      const fastX=Math.abs(vx)>650, fastUp=vy<-650;
+      if(dx>FLING_X||(fastX&&vx>0&&dx>40)) runOnJS(doFling)('like');
+      else if(dx<-FLING_X||(fastX&&vx<0&&dx<-40)) runOnJS(doFling)('dislike');
+      else if(dy<-FLING_Y||(fastUp&&dy<-40)) runOnJS(doFling)('next');
+      else { tx.value=withSpring(0,{damping:20,stiffness:200}); ty.value=withSpring(0,{damping:20,stiffness:200}); }
+    });
+  const tapGesture=Gesture.Tap().maxDistance(12).onEnd((_e,success)=>{ if(success) runOnJS(openCur)(); });
+  const cardGesture=Gesture.Exclusive(panGesture,tapGesture);
 
   function doVersus(winnerId:string){
     if(pool.length<2) return;
@@ -195,6 +193,9 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const pop=popAction?VERDICT[popAction]:null;
 
   return <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+    {/* A Modal renders in its own native hierarchy, so gestures inside it need
+        their own GestureHandlerRootView to work. */}
+    <GestureHandlerRootView style={{flex:1}}>
     <SafeAreaView style={{flex:1,backgroundColor:colors.bg}}>
       <StatusBar barStyle="dark-content"/>
       {/* Header */}
@@ -244,34 +245,33 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
                 <BookCover bookId={next.id} size="lg" style={coverStyle}/>
               </View>}
 
-              {/* active draggable card */}
-              <Animated.View ref={cardRef} {...panHandlers}
-                style={{alignItems:'center',transform:[{translateX:pan.x},{translateY:pan.y},{rotate}],cursor:'grab',touchAction:'none'} as any}>
-                <TouchableOpacity activeOpacity={0.94} onPress={tapToOpen}>
+              {/* active draggable card — gesture + transforms run on the UI thread */}
+              <GestureDetector gesture={cardGesture}>
+                <Reanimated.View style={[{alignItems:'center'},cardStyle]}>
                   <View style={{borderRadius:radius.md}}>
                     <BookCover bookId={cur.id} size="lg" style={coverStyle}/>
                     {/* verdict stamps */}
-                    <Animated.View style={{position:'absolute',top:16,left:14,opacity:likeOpacity,borderWidth:3,borderColor:colors.accent,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'-14deg'}],backgroundColor:'rgba(79,122,91,0.22)'}}>
+                    <Reanimated.View style={[{position:'absolute',top:16,left:14,borderWidth:3,borderColor:colors.accent,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'-14deg'}],backgroundColor:'rgba(79,122,91,0.22)'},yesStyle]}>
                       <Text style={{fontFamily:fonts.sansBold,fontSize:22,color:colors.accent,letterSpacing:1.5}}>YES ♥</Text>
-                    </Animated.View>
-                    <Animated.View style={{position:'absolute',top:16,right:14,opacity:nopeOpacity,borderWidth:3,borderColor:colors.danger,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'14deg'}],backgroundColor:'rgba(180,101,74,0.22)'}}>
+                    </Reanimated.View>
+                    <Reanimated.View style={[{position:'absolute',top:16,right:14,borderWidth:3,borderColor:colors.danger,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'14deg'}],backgroundColor:'rgba(180,101,74,0.22)'},nopeStyle]}>
                       <Text style={{fontFamily:fonts.sansBold,fontSize:22,color:colors.danger,letterSpacing:1.5}}>NOPE ✕</Text>
-                    </Animated.View>
-                    <Animated.View style={{position:'absolute',bottom:16,alignSelf:'center',opacity:laterOpacity,borderWidth:3,borderColor:colors.surface,paddingHorizontal:14,paddingVertical:5,borderRadius:8,backgroundColor:'rgba(38,32,25,0.55)'}}>
+                    </Reanimated.View>
+                    <Reanimated.View style={[{position:'absolute',bottom:16,alignSelf:'center',borderWidth:3,borderColor:colors.surface,paddingHorizontal:14,paddingVertical:5,borderRadius:8,backgroundColor:'rgba(38,32,25,0.55)'},skipStyle]}>
                       <Text style={{fontFamily:fonts.sansBold,fontSize:17,color:colors.surface,letterSpacing:1.5}}>SKIP ↑</Text>
-                    </Animated.View>
+                    </Reanimated.View>
                   </View>
-                </TouchableOpacity>
 
-                {/* info block — flies away with the card */}
-                <Text style={{fontFamily:fonts.serifBold,fontSize:21,lineHeight:27,color:colors.text,marginTop:16,textAlign:'center',maxWidth:COVER_W+40}} numberOfLines={2}>{cur.title}</Text>
-                <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,marginTop:2,textAlign:'center'}}>{cur.author}</Text>
-                <View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'center',gap:6,marginTop:10}}>
-                  {cur.readers>0&&<View style={metaChip}><Text style={metaTxt}>★ {cur.avgRating}</Text></View>}
-                  {curVibe?.pace?<View style={metaChip}><Text style={metaTxt}>{curVibe.pace}</Text></View>:null}
-                  {cur.pages?<View style={metaChip}><Text style={metaTxt}>{cur.pages}p</Text></View>:null}
-                </View>
-              </Animated.View>
+                  {/* info block — flies away with the card */}
+                  <Text style={{fontFamily:fonts.serifBold,fontSize:21,lineHeight:27,color:colors.text,marginTop:16,textAlign:'center',maxWidth:COVER_W+40}} numberOfLines={2}>{cur.title}</Text>
+                  <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,marginTop:2,textAlign:'center'}}>{cur.author}</Text>
+                  <View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'center',gap:6,marginTop:10}}>
+                    {cur.readers>0&&<View style={metaChip}><Text style={metaTxt}>★ {cur.avgRating}</Text></View>}
+                    {curVibe?.pace?<View style={metaChip}><Text style={metaTxt}>{curVibe.pace}</Text></View>:null}
+                    {cur.pages?<View style={metaChip}><Text style={metaTxt}>{cur.pages}p</Text></View>:null}
+                  </View>
+                </Reanimated.View>
+              </GestureDetector>
             </View>
 
             {/* pop confirmation badge */}
@@ -294,7 +294,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
           <View style={{flexDirection:'row',justifyContent:'center',alignItems:'flex-end',gap:28,paddingTop:spacing.sm,paddingBottom:spacing.md}}>
             {([['dislike','Nope'],['next','Skip'],['like','Yes']] as const).map(([act,lbl])=>{const v=VERDICT[act];const big=act==='like';
               return <View key={act} style={{alignItems:'center',gap:7}}>
-                <TouchableOpacity onPress={()=>flingOut(act)} activeOpacity={0.8} style={[swBtn,big&&swBtnBig,{borderColor:v.color}]}>
+                <TouchableOpacity onPress={()=>doFling(act)} activeOpacity={0.8} style={[swBtn,big&&swBtnBig,{borderColor:v.color}]}>
                   <Text style={{fontSize:big?30:24,color:v.color}}>{v.icon}</Text>
                 </TouchableOpacity>
                 <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3}}>{lbl}</Text>
@@ -347,6 +347,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
         </View>
       </View>}
     </SafeAreaView>
+    </GestureHandlerRootView>
   </Modal>;
 }
 
