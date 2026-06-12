@@ -1,13 +1,19 @@
 import React,{useState,useRef,useEffect} from 'react';
 import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,PanResponder,Dimensions,Platform,Easing} from 'react-native';
 import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../constants/theme';
-import {BOOKS} from '../data/books';
+import {BOOKS,BOOK_VIBES} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
 import {tick,impact,notify} from '../utils/haptics';
 
-const SCREEN_W=Dimensions.get('window').width;
+const {width:SCREEN_W,height:SCREEN_H}=Dimensions.get('window');
 const FLING_X=110, FLING_Y=110;
+// The cover is the hero — size it to fill the screen while staying within the
+// 2:3 book aspect, bounded by both width (66%) and height (45%) so it fits on
+// small phones too. coverStyle overrides BookCover's preset dimensions.
+const COVER_W=Math.round(Math.min(SCREEN_W*0.66, SCREEN_H*0.45*0.66));
+const COVER_H=Math.round(COVER_W/0.66);
+const coverStyle={width:COVER_W,height:COVER_H,borderRadius:radius.md};
 
 // Shown once per app session; re-openable via the ? button.
 let seenRules=false;
@@ -28,8 +34,10 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const queue=allBooks.filter(b=>!swipeData[b.id]);
   const cur=queue[0];
   const next=queue[1];
+  const next2=queue[2];
   const total=allBooks.length;
   const done=total-queue.length;
+  const curVibe=cur?BOOK_VIBES[cur.id]:null;
 
   const [mode,setMode]=useState<'swipe'|'versus'>('swipe');
   const [pairIdx,setPairIdx]=useState(0);
@@ -49,7 +57,9 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const likeOpacity=pan.x.interpolate({inputRange:[30,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
   const nopeOpacity=pan.x.interpolate({inputRange:[-FLING_X,-30],outputRange:[1,0],extrapolate:'clamp'});
   const laterOpacity=pan.y.interpolate({inputRange:[-FLING_Y,-30],outputRange:[1,0],extrapolate:'clamp'});
-  const nextScale=pan.x.interpolate({inputRange:[-200,0,200],outputRange:[1,0.94,1],extrapolate:'clamp'});
+  // The card behind grows toward full size as you drag the top card away.
+  const nextScale=pan.x.interpolate({inputRange:[-200,0,200],outputRange:[1,0.95,1],extrapolate:'clamp'});
+  const nextLift=pan.x.interpolate({inputRange:[-200,0,200],outputRange:[0,-11,0],extrapolate:'clamp'});
   const glowLike=pan.x.interpolate({inputRange:[0,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
   const glowNope=pan.x.interpolate({inputRange:[-FLING_X,0],outputRange:[1,0],extrapolate:'clamp'});
 
@@ -223,58 +233,71 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
       </View>
 
       {/* ── SWIPE MODE ── */}
-      {mode==='swipe'&&<View style={{flex:1,paddingHorizontal:spacing.lg,paddingTop:12}}>
+      {mode==='swipe'&&<View style={{flex:1,paddingHorizontal:spacing.lg,paddingTop:10}}>
         {/* progress */}
-        <View style={{marginBottom:12}}>
-          <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:6}}>
+        <View style={{marginBottom:6}}>
+          <View style={{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
             <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.text3}}>{queue.length} left</Text>
-            <Animated.Text style={{fontFamily:fonts.sansBold,fontSize:11,color:colors.accent,transform:[{scale:countV}]}}>{sessionCount} swiped this session</Animated.Text>
+            <Animated.Text style={{fontFamily:fonts.sansBold,fontSize:11,color:colors.accent,transform:[{scale:countV}]}}>{sessionCount} this session</Animated.Text>
           </View>
-          <View style={{height:5,borderRadius:3,backgroundColor:colors.surface2,overflow:'hidden'}}>
-            <View style={{height:5,borderRadius:3,backgroundColor:colors.accent,width:`${Math.round(done/Math.max(1,total)*100)}%` as any}}/>
+          <View style={{height:4,borderRadius:2,backgroundColor:colors.surface2,overflow:'hidden'}}>
+            <View style={{height:4,borderRadius:2,backgroundColor:colors.accent,width:`${Math.round(done/Math.max(1,total)*100)}%` as any}}/>
           </View>
         </View>
 
-        {cur?<View style={{flex:1,alignItems:'center'}}>
-          <View style={{width:'100%',flex:1,alignItems:'center',justifyContent:'flex-start'}}>
-            {/* next card peeking */}
-            {next&&<Animated.View style={{position:'absolute',top:8,alignItems:'center',transform:[{scale:nextScale}],opacity:0.4}}>
-              <BookCover bookId={next.id} size="lg"/>
-            </Animated.View>}
+        {cur?<View style={{flex:1}}>
+          {/* card zone — the cover deck dominates */}
+          <View style={{flex:1,alignItems:'center',justifyContent:'center'}}>
+            <View style={{width:COVER_W,alignItems:'center'}}>
+              {/* deck behind — depth */}
+              {next2&&<View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:-22},{scale:0.9}],opacity:0.45}}>
+                <BookCover bookId={next2.id} size="lg" style={{...coverStyle,...shadow.soft}}/>
+              </View>}
+              {next&&<Animated.View pointerEvents="none" style={{position:'absolute',top:0,transform:[{translateY:nextLift},{scale:nextScale}],opacity:0.8}}>
+                <BookCover bookId={next.id} size="lg" style={{...coverStyle,...shadow.soft}}/>
+              </Animated.View>}
 
-            {/* draggable card */}
-            <Animated.View ref={cardRef} {...panHandlers}
-              style={{alignItems:'center',transform:[{translateX:pan.x},{translateY:pan.y},{rotate}],cursor:'grab',touchAction:'none'} as any}>
-              <TouchableOpacity activeOpacity={0.92} onPress={tapToOpen}>
-                {/* glow ring tinted by drag direction */}
-                <Animated.View pointerEvents="none" style={{position:'absolute',top:-4,left:-4,right:-4,bottom:-4,borderRadius:12,borderWidth:3,borderColor:colors.accent,opacity:glowLike}}/>
-                <Animated.View pointerEvents="none" style={{position:'absolute',top:-4,left:-4,right:-4,bottom:-4,borderRadius:12,borderWidth:3,borderColor:colors.danger,opacity:glowNope}}/>
-                <BookCover bookId={cur.id} size="lg"/>
-                {/* verdict stamps */}
-                <Animated.View style={{position:'absolute',top:10,left:8,opacity:likeOpacity,borderWidth:3,borderColor:colors.accent,paddingHorizontal:10,paddingVertical:4,borderRadius:8,transform:[{rotate:'-14deg'}],backgroundColor:'rgba(79,122,91,0.18)'}}>
-                  <Text style={{fontFamily:fonts.sansBold,fontSize:18,color:colors.accent,letterSpacing:1.5}}>YES ♥</Text>
-                </Animated.View>
-                <Animated.View style={{position:'absolute',top:10,right:8,opacity:nopeOpacity,borderWidth:3,borderColor:colors.danger,paddingHorizontal:10,paddingVertical:4,borderRadius:8,transform:[{rotate:'14deg'}],backgroundColor:'rgba(180,101,74,0.18)'}}>
-                  <Text style={{fontFamily:fonts.sansBold,fontSize:18,color:colors.danger,letterSpacing:1.5}}>NOPE ✕</Text>
-                </Animated.View>
-                <Animated.View style={{position:'absolute',bottom:10,alignSelf:'center',opacity:laterOpacity,borderWidth:3,borderColor:colors.text3,paddingHorizontal:10,paddingVertical:4,borderRadius:8,backgroundColor:'rgba(90,78,58,0.22)'}}>
-                  <Text style={{fontFamily:fonts.sansBold,fontSize:15,color:colors.text2,letterSpacing:1.5}}>SKIP ↑</Text>
-                </Animated.View>
-              </TouchableOpacity>
-              <Text style={{fontFamily:fonts.serifBold,fontSize:20,color:colors.text,marginTop:16,textAlign:'center'}}>{cur.title}</Text>
-              <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,marginBottom:6,textAlign:'center'}}>{cur.author}</Text>
-              <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,textAlign:'center',maxWidth:280,lineHeight:17}} numberOfLines={3}>{cur.synopsis}</Text>
-              <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3,marginTop:8}}>Tap the card for full details ›</Text>
-            </Animated.View>
+              {/* active draggable card */}
+              <Animated.View ref={cardRef} {...panHandlers}
+                style={{alignItems:'center',transform:[{translateX:pan.x},{translateY:pan.y},{rotate}],cursor:'grab',touchAction:'none'} as any}>
+                <TouchableOpacity activeOpacity={0.94} onPress={tapToOpen}>
+                  <View style={{borderRadius:radius.md,...shadow.card}}>
+                    {/* glow ring tinted by drag direction */}
+                    <Animated.View pointerEvents="none" style={{position:'absolute',top:-3,left:-3,right:-3,bottom:-3,borderRadius:radius.md+3,borderWidth:3,borderColor:colors.accent,opacity:glowLike,zIndex:2}}/>
+                    <Animated.View pointerEvents="none" style={{position:'absolute',top:-3,left:-3,right:-3,bottom:-3,borderRadius:radius.md+3,borderWidth:3,borderColor:colors.danger,opacity:glowNope,zIndex:2}}/>
+                    <BookCover bookId={cur.id} size="lg" style={coverStyle}/>
+                    {/* verdict stamps */}
+                    <Animated.View style={{position:'absolute',top:16,left:14,opacity:likeOpacity,borderWidth:3,borderColor:colors.accent,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'-14deg'}],backgroundColor:'rgba(79,122,91,0.22)'}}>
+                      <Text style={{fontFamily:fonts.sansBold,fontSize:22,color:colors.accent,letterSpacing:1.5}}>YES ♥</Text>
+                    </Animated.View>
+                    <Animated.View style={{position:'absolute',top:16,right:14,opacity:nopeOpacity,borderWidth:3,borderColor:colors.danger,paddingHorizontal:12,paddingVertical:5,borderRadius:8,transform:[{rotate:'14deg'}],backgroundColor:'rgba(180,101,74,0.22)'}}>
+                      <Text style={{fontFamily:fonts.sansBold,fontSize:22,color:colors.danger,letterSpacing:1.5}}>NOPE ✕</Text>
+                    </Animated.View>
+                    <Animated.View style={{position:'absolute',bottom:16,alignSelf:'center',opacity:laterOpacity,borderWidth:3,borderColor:colors.surface,paddingHorizontal:14,paddingVertical:5,borderRadius:8,backgroundColor:'rgba(38,32,25,0.55)'}}>
+                      <Text style={{fontFamily:fonts.sansBold,fontSize:17,color:colors.surface,letterSpacing:1.5}}>SKIP ↑</Text>
+                    </Animated.View>
+                  </View>
+                </TouchableOpacity>
+
+                {/* info block — flies away with the card */}
+                <Text style={{fontFamily:fonts.serifBold,fontSize:21,lineHeight:27,color:colors.text,marginTop:16,textAlign:'center',maxWidth:COVER_W+40}} numberOfLines={2}>{cur.title}</Text>
+                <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,marginTop:2,textAlign:'center'}}>{cur.author}</Text>
+                <View style={{flexDirection:'row',flexWrap:'wrap',justifyContent:'center',gap:6,marginTop:10}}>
+                  {cur.readers>0&&<View style={metaChip}><Text style={metaTxt}>★ {cur.avgRating}</Text></View>}
+                  {curVibe?.pace?<View style={metaChip}><Text style={metaTxt}>{curVibe.pace}</Text></View>:null}
+                  {cur.pages?<View style={metaChip}><Text style={metaTxt}>{cur.pages}p</Text></View>:null}
+                </View>
+              </Animated.View>
+            </View>
 
             {/* pop confirmation badge */}
-            {pop&&<Animated.View pointerEvents="none" style={{position:'absolute',top:'34%',alignSelf:'center',opacity:popV,transform:[{scale:popV.interpolate({inputRange:[0,1],outputRange:[0.5,1]})}]}}>
-              <View style={{backgroundColor:pop.color,paddingHorizontal:22,paddingVertical:12,borderRadius:radius.pill,...shadow.card}}>
-                <Text style={{fontFamily:fonts.sansBold,fontSize:18,color:'#fff'}}>{pop.icon} {pop.label}</Text>
+            {pop&&<Animated.View pointerEvents="none" style={{position:'absolute',opacity:popV,transform:[{scale:popV.interpolate({inputRange:[0,1],outputRange:[0.5,1]})}]}}>
+              <View style={{backgroundColor:pop.color,paddingHorizontal:24,paddingVertical:13,borderRadius:radius.pill,...shadow.card}}>
+                <Text style={{fontFamily:fonts.sansBold,fontSize:19,color:'#fff'}}>{pop.icon} {pop.label}</Text>
               </View>
             </Animated.View>}
             {/* confetti */}
-            {bursting&&particles.map((p,i)=><Animated.View key={i} pointerEvents="none" style={{position:'absolute',top:'40%',alignSelf:'center',width:8,height:8,borderRadius:4,backgroundColor:p.color,
+            {bursting&&particles.map((p,i)=><Animated.View key={i} pointerEvents="none" style={{position:'absolute',width:8,height:8,borderRadius:4,backgroundColor:p.color,
               opacity:confV.interpolate({inputRange:[0,0.85,1],outputRange:[1,1,0]}),
               transform:[
                 {translateX:confV.interpolate({inputRange:[0,1],outputRange:[0,p.dx*p.dist]})},
@@ -283,12 +306,12 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
               ]}}/>)}
           </View>
 
-          {/* action buttons = persistent legend */}
-          <View style={{flexDirection:'row',justifyContent:'center',gap:20,paddingVertical:spacing.md}}>
-            {([['dislike','Not for me'],['next','Skip'],['like','Yes']] as const).map(([act,lbl])=>{const v=VERDICT[act];
-              return <View key={act} style={{alignItems:'center',gap:6}}>
-                <TouchableOpacity onPress={()=>flingOut(act)} style={[swBtn,{borderColor:v.color}]}>
-                  <Text style={{fontSize:act==='like'?26:22,color:v.color}}>{v.icon}</Text>
+          {/* action buttons */}
+          <View style={{flexDirection:'row',justifyContent:'center',alignItems:'flex-end',gap:28,paddingTop:spacing.sm,paddingBottom:spacing.md}}>
+            {([['dislike','Nope'],['next','Skip'],['like','Yes']] as const).map(([act,lbl])=>{const v=VERDICT[act];const big=act==='like';
+              return <View key={act} style={{alignItems:'center',gap:7}}>
+                <TouchableOpacity onPress={()=>flingOut(act)} activeOpacity={0.8} style={[swBtn,big&&swBtnBig,{borderColor:v.color}]}>
+                  <Text style={{fontSize:big?30:24,color:v.color}}>{v.icon}</Text>
                 </TouchableOpacity>
                 <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3}}>{lbl}</Text>
               </View>;})}
@@ -343,4 +366,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   </Modal>;
 }
 
-const swBtn:any={width:62,height:62,borderRadius:31,backgroundColor:colors.surface,borderWidth:2,borderColor:colors.border,alignItems:'center',justifyContent:'center',...shadow.soft};
+const swBtn:any={width:60,height:60,borderRadius:30,backgroundColor:colors.surface,borderWidth:2,borderColor:colors.border,alignItems:'center',justifyContent:'center',...shadow.card};
+const swBtnBig:any={width:72,height:72,borderRadius:36};
+const metaChip:any={paddingHorizontal:11,paddingVertical:5,backgroundColor:colors.surface2,borderRadius:radius.pill};
+const metaTxt:any={fontFamily:fonts.sansMedium,fontSize:11,color:colors.text2};

@@ -1,9 +1,10 @@
 import React,{useState,useRef,useEffect} from 'react';
 import {Modal,View,Text,TextInput,TouchableOpacity,ScrollView,SafeAreaView,StatusBar,ActivityIndicator} from 'react-native';
-import {colors,spacing,fonts} from '../constants/theme';
+import {colors,spacing,fonts,radius,shadow,type} from '../constants/theme';
 import {useStore} from '../store';
 import type {Book} from '../data/books';
 import BookCover from './BookCover';
+import {tick,impact,notify} from '../utils/haptics';
 
 interface Props { visible:boolean; onClose:()=>void; prefill?:string; }
 interface OLDoc { key:string;title:string;author_name?:string[];first_publish_year?:number;number_of_pages_median?:number;cover_i?:number; }
@@ -61,6 +62,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
     };
     addCustomBook(book);
     setAdded(s=>new Set([...s,id]));
+    notify('success');
   }
 
   function addManual(){
@@ -78,6 +80,7 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
     addCustomBook(book);
     setMTitle(''); setMAuthor(''); setMYear(''); setMPages(''); setMGenre(''); setMISBN('');
     setManualDone(true);
+    notify('success');
     setTimeout(()=>setManualDone(false),2000);
   }
 
@@ -94,9 +97,9 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
         <Text style={{flex:1,fontFamily:fonts.serifBold,fontSize:16,color:colors.text}}>Add a Book</Text>
       </View>
       <View style={{flexDirection:'row',paddingHorizontal:spacing.lg,paddingVertical:10,gap:8}}>
-        {(['search','manual'] as const).map(t=><TouchableOpacity key={t} onPress={()=>setTab(t)}
-          style={{flex:1,paddingVertical:9,alignItems:'center',borderRadius:999,backgroundColor:tab===t?colors.accent:colors.surface}}>
-          <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:tab===t?colors.text:colors.text2}}>{t==='search'?'Search Open Library':'Add Manually'}</Text>
+        {(['search','manual'] as const).map(t=><TouchableOpacity key={t} onPress={()=>{tick();setTab(t);}}
+          style={{flex:1,paddingVertical:10,alignItems:'center',borderRadius:radius.pill,backgroundColor:tab===t?colors.accent:colors.surface,borderWidth:1,borderColor:tab===t?colors.accent:colors.border}}>
+          <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:tab===t?colors.accentText:colors.text2}}>{t==='search'?'Search Open Library':'Add Manually'}</Text>
         </TouchableOpacity>)}
       </View>
 
@@ -105,28 +108,34 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
           <TextInput style={inp} placeholder="Search by title or author…" placeholderTextColor={colors.text3} value={q} onChangeText={handleSearch} autoCorrect={false} autoCapitalize="none"/>
         </View>
         {loading&&<ActivityIndicator color={colors.accent} style={{marginTop:spacing.lg}}/>}
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom:32}}>
-          {results.map((doc,i)=>{
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingTop:4,paddingBottom:32}}>
+          {results.map((doc)=>{
             const id='ol-'+doc.key.replace('/works/','');
             const isAdded=added.has(id);
-            return <View key={doc.key} style={{flexDirection:'row',padding:spacing.lg,borderBottomWidth:1,borderBottomColor:colors.border,gap:12,alignItems:'center'}}>
-              {doc.cover_i?<BookCover bookId={id} size="sm" olCoverId={doc.cover_i}/>:
-                <View style={{width:40,height:56,backgroundColor:colors.surface2,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center'}}>
-                  <Text style={{fontFamily:fonts.serifItalic,fontSize:20,color:colors.text3}}>{(doc.title||'?').trim()[0]||'?'}</Text>
+            return <View key={doc.key} style={{flexDirection:'row',marginHorizontal:spacing.lg,marginBottom:10,padding:12,backgroundColor:colors.surface,borderRadius:radius.lg,gap:13,alignItems:'center',...shadow.soft}}>
+              {doc.cover_i?<BookCover bookId={id} size="md" olCoverId={doc.cover_i}/>:
+                <View style={{width:80,height:116,backgroundColor:colors.surface2,borderRadius:8,alignItems:'center',justifyContent:'center'}}>
+                  <Text style={{fontFamily:fonts.serifItalic,fontSize:30,color:colors.text3}}>{(doc.title||'?').trim()[0]||'?'}</Text>
                 </View>}
-              <View style={{flex:1}}>
-                <Text style={{fontSize:13,color:colors.text,fontWeight:'600',marginBottom:2}} numberOfLines={2}>{doc.title}</Text>
-                <Text style={{fontSize:11,color:colors.text3}}>{doc.author_name?.[0]||'Unknown'}{doc.first_publish_year?` · ${doc.first_publish_year}`:''}</Text>
-                {doc.number_of_pages_median?<Text style={{fontSize:10,color:colors.text3,marginTop:2}}>{doc.number_of_pages_median} pages</Text>:null}
+              <View style={{flex:1,justifyContent:'center'}}>
+                <Text style={{fontFamily:fonts.serifBold,fontSize:15,color:colors.text,marginBottom:3}} numberOfLines={2}>{doc.title}</Text>
+                <Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3}} numberOfLines={1}>{doc.author_name?.[0]||'Unknown'}{doc.first_publish_year?` · ${doc.first_publish_year}`:''}</Text>
+                {doc.number_of_pages_median?<Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3,marginTop:2}}>{doc.number_of_pages_median} pages</Text>:null}
+                <TouchableOpacity onPress={()=>addOLBook(doc)} activeOpacity={0.85}
+                  style={{alignSelf:'flex-start',marginTop:10,paddingHorizontal:16,paddingVertical:8,backgroundColor:isAdded?colors.accentDim:colors.accent,borderWidth:1,borderColor:colors.accent,borderRadius:radius.pill}}>
+                  <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:isAdded?colors.accent:colors.accentText}}>{isAdded?'✓ Added':'+ Add'}</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={()=>addOLBook(doc)}
-                style={{paddingHorizontal:14,paddingVertical:8,backgroundColor:isAdded?colors.surface2:colors.accent,borderWidth:1,borderColor:isAdded?colors.border:colors.accent,borderRadius:999}}>
-                <Text style={{fontSize:12,color:isAdded?colors.text3:colors.bg,fontWeight:'600'}}>{isAdded?'Added':'+ Add'}</Text>
-              </TouchableOpacity>
             </View>;
           })}
           {!loading&&q.trim()&&results.length===0&&<View style={{padding:spacing.xl,alignItems:'center'}}>
-            <Text style={{fontSize:13,color:colors.text3}}>No results found.</Text>
+            <Text style={{fontFamily:fonts.serifItalic,fontSize:18,color:colors.text2,marginBottom:6}}>Nothing yet</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center'}}>No match on Open Library. Try a different spelling, or add it manually.</Text>
+          </View>}
+          {!loading&&!q.trim()&&<View style={{paddingHorizontal:spacing.xl,paddingTop:spacing.xxl,alignItems:'center'}}>
+            <Text style={{fontSize:40,marginBottom:12}}>📚</Text>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:18,color:colors.text,marginBottom:6,textAlign:'center'}}>Search millions of books</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',lineHeight:19}}>Type a title or author above and we'll pull covers and details straight from Open Library.</Text>
           </View>}
         </ScrollView>
       </View>}
@@ -151,8 +160,8 @@ export default function AddBookModal({visible,onClose,prefill}:Props){
         </View>
         <Text style={{fontSize:9,letterSpacing:1.8,textTransform:'uppercase',color:colors.text3,fontWeight:'600',marginTop:10,marginBottom:4}}>Genre</Text>
         <TextInput style={inp} placeholder="Literary Fiction, etc." placeholderTextColor={colors.text3} value={mGenre} onChangeText={setMGenre}/>
-        <TouchableOpacity style={{backgroundColor:colors.accent,padding:14,alignItems:'center',marginTop:16,borderRadius:999}} onPress={addManual}>
-          <Text style={{color:colors.bg,fontSize:13,fontWeight:'600'}}>Add to Library</Text>
+        <TouchableOpacity activeOpacity={0.85} style={{backgroundColor:mTitle.trim()&&mAuthor.trim()?colors.accent:colors.surface2,padding:15,alignItems:'center',marginTop:16,borderRadius:radius.pill}} onPress={addManual}>
+          <Text style={{fontFamily:fonts.sansBold,color:mTitle.trim()&&mAuthor.trim()?colors.accentText:colors.text3,fontSize:13}}>Add to Library</Text>
         </TouchableOpacity>
         <View style={{height:40}}/>
       </ScrollView>}

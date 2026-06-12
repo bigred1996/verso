@@ -8,6 +8,7 @@ import BookCover from '../../components/BookCover';
 import BookDetailModal from '../../components/BookDetailModal';
 import SwipeModal from '../../components/SwipeModal';
 import AddBookModal from '../../components/AddBookModal';
+import {tick,impact} from '../../utils/haptics';
 
 const SUBS=['For You','Mood'] as const;
 type Sub=typeof SUBS[number];
@@ -28,7 +29,8 @@ export default function DiscoverScreen(){
   const searching=q.trim().length>0;
   const results=allBooks.filter(b=>b.title.toLowerCase().includes(q.toLowerCase())||b.author.toLowerCase().includes(q.toLowerCase()));
 
-  function toggleMood(m:string){ setMoods(p=>p.includes(m)?p.filter(x=>x!==m):p.length>=3?p:[...p,m]); }
+  function toggleMood(m:string){ tick(); setMoods(p=>p.includes(m)?p.filter(x=>x!==m):p.length>=3?p:[...p,m]); }
+  const swipePreview=allBooks.filter(b=>!swipeData[b.id]&&!shelf[b.id]);
 
   // Mood filter results
   const moodMatches=allBooks.filter(b=>{const v=BOOK_VIBES[b.id];if(!v)return false;
@@ -82,7 +84,7 @@ export default function DiscoverScreen(){
         <Text style={[type.label,{marginBottom:2}]}>Discover</Text>
         <Text style={{fontFamily:fonts.serifItalic,fontSize:30,lineHeight:40,color:colors.text}}>Verso</Text>
       </View>
-      <TouchableOpacity onPress={()=>setShowAdd(true)} style={{paddingHorizontal:15,paddingVertical:9,backgroundColor:colors.accent,borderRadius:radius.pill,...shadow.soft}}>
+      <TouchableOpacity activeOpacity={0.85} onPress={()=>{tick();setShowAdd(true);}} style={{paddingHorizontal:15,paddingVertical:9,backgroundColor:colors.accent,borderRadius:radius.pill,...shadow.soft}}>
         <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accentText}}>+ Add Book</Text>
       </TouchableOpacity>
     </View>
@@ -93,7 +95,7 @@ export default function DiscoverScreen(){
     </View>
     {/* Pill sub-nav */}
     {!searching&&<View style={{flexDirection:'row',gap:8,paddingHorizontal:spacing.lg,paddingVertical:8}}>
-      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>setSub(s)} style={{flex:1,paddingVertical:9,borderRadius:radius.pill,alignItems:'center',backgroundColor:sub===s?colors.accent:colors.surface,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
+      {SUBS.map(s=><TouchableOpacity key={s} onPress={()=>{tick();setSub(s);}} style={{flex:1,paddingVertical:9,borderRadius:radius.pill,alignItems:'center',backgroundColor:sub===s?colors.accent:colors.surface,borderWidth:1,borderColor:sub===s?colors.accent:colors.border}}>
         <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:sub===s?colors.accentText:colors.text2}}>{s}</Text>
       </TouchableOpacity>)}
     </View>}
@@ -121,13 +123,22 @@ export default function DiscoverScreen(){
             return <Row key={r.id} id={r.id} extra={seed?<Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent,marginTop:4}}>Because you loved {seed.title}</Text>:undefined}/>;})}
         </View>}
 
-        {/* Book Swipe — feeds the recs above */}
-        <TouchableOpacity style={card} activeOpacity={0.85} onPress={()=>setShowSwipe(true)}>
-          <View style={{flex:1}}>
-            <Text style={{fontFamily:fonts.sansBold,fontSize:14,color:pastelText.sky,marginBottom:3}}>{allBooks.filter(b=>!swipeData[b.id]&&!shelf[b.id]).length} books to react to</Text>
-            <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:pastelText.sky,opacity:0.8}}>Book Swipe · the more you swipe, the better these get</Text>
+        {/* Book Swipe — the centerpiece; feeds the recs above */}
+        <TouchableOpacity style={card} activeOpacity={0.9} onPress={()=>{impact('light');setShowSwipe(true);}}>
+          {/* fanned deck preview of what's up next */}
+          <View style={{width:70,height:58,marginRight:14,justifyContent:'center'}}>
+            {swipePreview.slice(0,3).map((b,i)=><View key={b.id} style={{position:'absolute',left:i*15,transform:[{rotate:`${(i-1)*7}deg`}],...shadow.soft}}>
+              <BookCover bookId={b.id} size="sm" style={{width:37,height:54,borderRadius:6}}/>
+            </View>)}
           </View>
-          <Text style={{fontSize:20,color:pastelText.sky}}>→</Text>
+          <View style={{flex:1}}>
+            <Text style={[type.label,{color:pastelText.sky,marginBottom:3}]}>Book Swipe</Text>
+            <Text style={{fontFamily:fonts.serifBold,fontSize:17,color:pastelText.sky,marginBottom:2}}>{swipePreview.length} to react to</Text>
+            <Text style={{fontFamily:fonts.sans,fontSize:11,color:pastelText.sky,opacity:0.85}}>The more you swipe, the smarter your recs</Text>
+          </View>
+          <View style={{width:38,height:38,borderRadius:19,backgroundColor:pastelText.sky,alignItems:'center',justifyContent:'center'}}>
+            <Text style={{fontSize:18,color:pastels.sky}}>→</Text>
+          </View>
         </TouchableOpacity>
 
         {/* Your taste-twins loved */}
@@ -179,7 +190,7 @@ export default function DiscoverScreen(){
         </View>
         <Text style={[type.label,{marginBottom:12}]}>How fast do you want to move?</Text>
         <View style={{flexDirection:'row',gap:8,marginBottom:spacing.lg}}>
-          {PACES.map(p=><TouchableOpacity key={p} onPress={()=>setPace(pace===p?null:p)} style={[chip,pace===p&&activeChip]}>
+          {PACES.map(p=><TouchableOpacity key={p} onPress={()=>{tick();setPace(pace===p?null:p);}} style={[chip,pace===p&&activeChip]}>
             <Text style={{fontFamily:fonts.sans,fontSize:12,color:pace===p?colors.accent:colors.text3}}>{p}</Text>
           </TouchableOpacity>)}
         </View>
