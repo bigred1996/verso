@@ -1,11 +1,13 @@
 import React,{useState,useRef,useEffect,useLayoutEffect} from 'react';
-import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions,Image} from 'react-native';
+import {Modal,View,Text,TouchableOpacity,SafeAreaView,StatusBar,Animated,Dimensions} from 'react-native';
+import {Image as ExpoImage} from 'expo-image';
 import Reanimated,{useSharedValue,useAnimatedStyle,withSpring,withTiming,runOnJS,interpolate,Extrapolation} from 'react-native-reanimated';
 import {Gesture,GestureDetector,GestureHandlerRootView} from 'react-native-gesture-handler';
 import {colors,spacing,fonts,radius,shadow} from '../constants/theme';
 import {BOOKS,BOOK_VIBES} from '../data/books';
 import {useStore} from '../store';
 import BookCover,{coverUri} from './BookCover';
+import BookDetailModal from './BookDetailModal';
 import {tick,impact,notify} from '../utils/haptics';
 
 const {width:SCREEN_W,height:SCREEN_H}=Dimensions.get('window');
@@ -46,6 +48,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
 
   const [mode,setMode]=useState<'swipe'|'versus'>('swipe');
   const [pairIdx,setPairIdx]=useState(0);
+  const [infoId,setInfoId]=useState<string|null>(null);
   const [showRules,setShowRules]=useState(!seenRules);
   const [sessionCount,setSessionCount]=useState(0);
 
@@ -60,7 +63,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     const ahead=mode==='swipe'
       ? queue.slice(0,10)
       : Array.from({length:10},(_,k)=>allBooks[(pairIdx*2+k)%Math.max(1,n)]);
-    ahead.forEach(b=>{ if(!b) return; const u=coverUri(b.id,b.olCoverId); if(u&&Image.prefetch) try{ Image.prefetch(u)?.catch?.(()=>{}); }catch{} });
+    ahead.forEach(b=>{ if(!b) return; const u=coverUri(b.id,b.olCoverId); if(u) try{ ExpoImage.prefetch(u,{cachePolicy:'memory-disk'})?.catch?.(()=>{}); }catch{} });
   },[mode,cur?.id,pairIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Drag (UI-thread: react-native-gesture-handler + Reanimated) ──
@@ -116,7 +119,9 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     tx.value=withTiming(toX,{duration:135});
     ty.value=withTiming(toY,{duration:135},(finished)=>{ if(finished) runOnJS(commitSwipe)(action); });
   }
-  function openCur(){ if(cur) onOpenBook(cur.id); }
+  // Tap a cover to peek at the full book (genre, tropes, quotes, reviews)
+  // without leaving the deck — closing the sheet drops you back where you were.
+  function openCur(){ if(cur) setInfoId(cur.id); }
 
   // Pan runs entirely on the UI thread. activeOffset means a small move is NOT
   // a drag, so the Tap gesture (open the book) wins for taps. vx/vy are px/s.
@@ -229,6 +234,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
                     {curVibe?.pace?<View style={metaChip}><Text style={metaTxt}>{curVibe.pace}</Text></View>:null}
                     {cur.pages?<View style={metaChip}><Text style={metaTxt}>{cur.pages}p</Text></View>:null}
                   </View>
+                  <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.text3,marginTop:10,textAlign:'center'}}>ⓘ Tap the cover for details</Text>
                 </Reanimated.View>
               </GestureDetector>
             </View>
@@ -263,7 +269,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
                 <Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.accentText,letterSpacing:0.5}}>VS</Text>
               </View>
             </View>
-            :<TouchableOpacity key={b.id} onPress={()=>doVersus(b.id)} onLongPress={()=>onOpenBook(b.id)} activeOpacity={0.85} style={{width:VS_W,alignItems:'center'}}>
+            :<TouchableOpacity key={b.id} onPress={()=>doVersus(b.id)} onLongPress={()=>setInfoId(b.id)} activeOpacity={0.85} style={{width:VS_W,alignItems:'center'}}>
               <BookCover bookId={b.id} size="lg" style={{width:VS_W,height:VS_H,borderRadius:radius.md,...shadow.card}}/>
               <Text style={{fontFamily:fonts.serifBold,fontSize:14,color:colors.text,marginTop:12,textAlign:'center',lineHeight:19}} numberOfLines={2}>{b.title}</Text>
               <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3,marginTop:2,textAlign:'center'}} numberOfLines={1}>{b.author}</Text>
@@ -298,6 +304,8 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
         </View>
       </View>}
     </SafeAreaView>
+    {/* Peek at the full book over the deck — closing returns to swiping */}
+    <BookDetailModal bookId={infoId} initialTab="about" onClose={()=>setInfoId(null)}/>
     </GestureHandlerRootView>
   </Modal>;
 }

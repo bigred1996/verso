@@ -62,18 +62,18 @@ const HOT_PLACEHOLDERS=[
   'Sum it up before you overthink it.','140 characters of pure opinion.',
 ];
 
-interface Props { bookId:string|null; onClose:()=>void; }
+interface Props { bookId:string|null; onClose:()=>void; initialTab?:'about'|'reviews'|'shelf'; }
 
-export default function BookDetailModal({bookId,onClose}:Props){
+export default function BookDetailModal({bookId,onClose,initialTab}:Props){
   const {shelf,ratings,formats,rereads,journal,userTags,reviews,buddyReads,favorites,dnfReasons,bookMoods,lists,customBooks,setShelf,setRating,setFormat,addReread,updateJournal,addJournalEntry,setUserTags,setReview,startBuddyRead,endBuddyRead,toggleFavorite,setDnfReason,setBookMoods,toggleListBook}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
 
   const [localId,setLocalId]=useState<string|null>(bookId);
-  useEffect(()=>{ setLocalId(bookId); },[bookId]);
+  useEffect(()=>{ setLocalId(bookId); if(bookId) setTab(initialTab||'about'); },[bookId]);
   const activeId=localId||bookId;
   const book=activeId?all.find(b=>b.id===activeId):null;
 
-  const [tab,setTab]=useState<'about'|'reviews'|'shelf'>('about');
+  const [tab,setTab]=useState<'about'|'reviews'|'shelf'>(initialTab||'about');
   const [journalPage,setJournalPage]=useState('');
   const [journalNote,setJournalNote]=useState('');
   const [rrRating,setRrRating]=useState(0);
@@ -425,23 +425,50 @@ export default function BookDetailModal({bookId,onClose}:Props){
             ══════════════════════════════════ */}
         {tab==='shelf'&&<>
 
-          {/* Shelf status */}
+          {/* Shelf status + format */}
           <View style={card}>
             <Text style={secTitle}>Your Shelf</Text>
             <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
               {SHELF_OPTS.map(o=>{const active=sh===o.k;return <TouchableOpacity key={o.l} onPress={()=>{setShelf(bid,active?null:o.k);if(active)tick();else impact('light');}}
                 style={[chip,active&&activeChip]}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:active?colors.accent:colors.text2}}>{o.l}</Text></TouchableOpacity>;})}
             </View>
+            {(sh==='reading'||sh==='read'||sh==='dnf')&&<>
+              <Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3,letterSpacing:0.8,textTransform:'uppercase',marginTop:18,marginBottom:10}}>Format</Text>
+              <View style={{flexDirection:'row',gap:8}}>
+                {FORMAT_OPTS.map(o=>{const active=fmt===o.k;return <TouchableOpacity key={o.k} onPress={()=>setFormat(bid,active?null:o.k)}
+                  style={[chip,active&&activeChip]}><Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:active?colors.accent:colors.text2}}>{o.l}</Text></TouchableOpacity>;})}
+              </View>
+            </>}
           </View>
 
-          {/* Format */}
-          {(sh==='reading'||sh==='read'||sh==='dnf')&&<View style={card}>
-            <Text style={secTitle}>Format</Text>
-            <View style={{flexDirection:'row',gap:8}}>
-              {FORMAT_OPTS.map(o=>{const active=fmt===o.k;return <TouchableOpacity key={o.k} onPress={()=>setFormat(bid,active?null:o.k)}
-                style={[chip,active&&activeChip]}><Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:active?colors.accent:colors.text2}}>{o.l}</Text></TouchableOpacity>;})}
-            </View>
-          </View>}
+          {/* Reading Journal — front and centre for active reads */}
+          <View style={card}>
+            <Text style={secTitle}>Reading Journal</Text>
+            {sh==='reading'&&<View style={{marginBottom:(j?.entries||[]).length>0?16:0}}>
+              <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:8}}>
+                <View style={{flex:1,height:5,backgroundColor:colors.surface2,borderRadius:3,overflow:'hidden'}}>
+                  <View style={{width:`${pct}%` as any,height:5,backgroundColor:colors.accent,borderRadius:3}}/>
+                </View>
+                <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accent,width:36}}>{pct}%</Text>
+              </View>
+              {j&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginBottom:12}}>Currently on p.{j.page} of {total}</Text>}
+              <View style={{flexDirection:'row',gap:8,marginBottom:8}}>
+                <TextInput style={[inp,{width:110}]} placeholder="Page" placeholderTextColor={colors.text3} value={journalPage} onChangeText={setJournalPage} keyboardType="numeric"/>
+                <TextInput style={[inp,{flex:1}]} placeholder="Note (optional)" placeholderTextColor={colors.text3} value={journalNote} onChangeText={setJournalNote}/>
+              </View>
+              <TouchableOpacity style={btn} onPress={saveJournalEntry}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.accentText}}>Update Progress</Text></TouchableOpacity>
+            </View>}
+            {(j?.entries||[]).length>0?<View>
+              {sh==='reading'&&<Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3,letterSpacing:0.8,textTransform:'uppercase',marginBottom:10}}>Reading Log</Text>}
+              {[...(j?.entries||[])].reverse().map((e,i)=><View key={i} style={{paddingVertical:10,borderTopWidth:i>0?1:0,borderTopColor:colors.border}}>
+                <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:3}}>
+                  <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{e.date}</Text>
+                  <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent}}>p.{e.page}</Text>
+                </View>
+                {e.note?<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,lineHeight:18}}>{e.note}</Text>:null}
+              </View>)}
+            </View>:sh!=='reading'&&<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.md}}>No journal entries yet.</Text>}
+          </View>
 
           {/* How did it feel? */}
           {!!rat&&<View style={card}>
@@ -544,35 +571,6 @@ export default function BookDetailModal({bookId,onClose}:Props){
               <TouchableOpacity onPress={doShare} style={[chip,{flex:1,alignItems:'center'}]}><Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text2}}>Share</Text></TouchableOpacity>
             </View>
             {shareFeedback&&<Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.accent,marginTop:8}}>{shareFeedback}</Text>}
-          </View>
-
-          {/* Reading Journal */}
-          <View style={card}>
-            <Text style={secTitle}>Reading Journal</Text>
-            {sh==='reading'&&<View style={{marginBottom:16}}>
-              <View style={{flexDirection:'row',alignItems:'center',gap:10,marginBottom:8}}>
-                <View style={{flex:1,height:5,backgroundColor:colors.surface2,borderRadius:3,overflow:'hidden'}}>
-                  <View style={{width:`${pct}%` as any,height:5,backgroundColor:colors.accent,borderRadius:3}}/>
-                </View>
-                <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.accent,width:36}}>{pct}%</Text>
-              </View>
-              {j&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,marginBottom:12}}>Currently on p.{j.page} of {total}</Text>}
-              <View style={{gap:8}}>
-                <TextInput style={inp} placeholder="Current page" placeholderTextColor={colors.text3} value={journalPage} onChangeText={setJournalPage} keyboardType="numeric"/>
-                <TextInput style={[inp,{height:72,textAlignVertical:'top'}]} placeholder="Note (optional)" placeholderTextColor={colors.text3} value={journalNote} onChangeText={setJournalNote} multiline/>
-                <TouchableOpacity style={btn} onPress={saveJournalEntry}><Text style={{fontFamily:fonts.sansBold,fontSize:13,color:colors.accentText}}>Update Progress</Text></TouchableOpacity>
-              </View>
-            </View>}
-            {(j?.entries||[]).length>0?<View>
-              {sh==='reading'&&<Text style={{fontFamily:fonts.sansMedium,fontSize:10,color:colors.text3,letterSpacing:0.8,textTransform:'uppercase',marginBottom:10}}>Reading Log</Text>}
-              {[...(j?.entries||[])].reverse().map((e,i)=><View key={i} style={{paddingVertical:10,borderTopWidth:i>0?1:0,borderTopColor:colors.border}}>
-                <View style={{flexDirection:'row',justifyContent:'space-between',marginBottom:3}}>
-                  <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{e.date}</Text>
-                  <Text style={{fontFamily:fonts.sansMedium,fontSize:11,color:colors.accent}}>p.{e.page}</Text>
-                </View>
-                {e.note?<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text2,lineHeight:18}}>{e.note}</Text>:null}
-              </View>)}
-            </View>:sh!=='reading'&&<Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,textAlign:'center',paddingVertical:spacing.md}}>No journal entries yet.</Text>}
           </View>
 
           {/* Re-reads */}

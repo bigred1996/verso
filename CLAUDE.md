@@ -75,7 +75,7 @@ Visual language: white/pastel cards float on the bg with `radius.lg` + `...shado
 
 ## Screen patterns
 
-**Today** (`index.tsx`) — engagement home, order: greeting → **streak hero** → **Book Swipe** → continue reading → friends activity → recommendations → trending → goal/challenge. Streak is derived from `store.streakDays` (`'Mon D'` labels): current streak = run of consecutive logged days ending today (or yesterday if today isn't logged). `logToday()` appends today.
+**Today** (`index.tsx`) — engagement home, order: **combined greeting+streak tracker** → **Book Swipe** → continue reading → friends activity → recommendations → trending → goal/challenge. The tracker card merges the greeting (date + name) with a compact flame/streak badge; tapping it (`trackerOpen`) expands a 4-week calendar grid (28 cells via `calendar`, aligned to weekday columns, ending the current week, future days muted). Streak is derived from `store.streakDays` (`'Mon D'` labels): current streak = run of consecutive logged days ending today (or yesterday if today isn't logged). `logToday()` appends today. Continue-reading rows open `BookDetailModal` on its `initialTab='shelf'` (My Shelf, where Reading Journal now sits near the top under a combined Your Shelf/Format card). Friends-activity rows open `SocialPostModal` (single-post view reusing `feedComments`/`addComment`). Goal/Challenge cards open `GoalModal` / `ChallengeModal`.
 
 **Discover** (`discover.tsx`) — search + 2 sub-tabs (`For You` · `Mood`). For You leads with `recommendBooks` ("Recommended for you"), then a Book Swipe card, taste-twin picks, trending, editor picks. Search overrides the tabs and offers add-from-OL.
 
