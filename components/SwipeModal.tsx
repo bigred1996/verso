@@ -4,6 +4,7 @@ import {colors,spacing,fonts,type,radius,shadow,pastels,pastelText} from '../con
 import {BOOKS} from '../data/books';
 import {useStore} from '../store';
 import BookCover from './BookCover';
+import {tick,impact,notify} from '../utils/haptics';
 
 const SCREEN_W=Dimensions.get('window').width;
 const FLING_X=110, FLING_Y=110;
@@ -52,6 +53,23 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
   const glowLike=pan.x.interpolate({inputRange:[0,FLING_X],outputRange:[0,1],extrapolate:'clamp'});
   const glowNope=pan.x.interpolate({inputRange:[-FLING_X,0],outputRange:[1,0],extrapolate:'clamp'});
 
+  // Light haptic tick the moment a drag crosses a commit threshold — so you
+  // feel the card "arm" before you let go. Re-arms once you fall back under.
+  const armed=useRef<{x:boolean;y:boolean}>({x:false,y:false});
+  useEffect(()=>{
+    const onX=pan.x.addListener(({value})=>{
+      const past=Math.abs(value)>FLING_X;
+      if(past&&!armed.current.x){ armed.current.x=true; tick(); }
+      else if(!past&&armed.current.x){ armed.current.x=false; }
+    });
+    const onY=pan.y.addListener(({value})=>{
+      const past=value<-FLING_Y;
+      if(past&&!armed.current.y){ armed.current.y=true; tick(); }
+      else if(!past&&armed.current.y){ armed.current.y=false; }
+    });
+    return ()=>{ pan.x.removeListener(onX); pan.y.removeListener(onY); };
+  },[]);
+
   // ── Pop confirmation + counter bounce ──
   const popV=useRef(new Animated.Value(0)).current;
   const countV=useRef(new Animated.Value(1)).current;
@@ -92,6 +110,9 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
 
   function celebrate(action:Action){
     playSound(action);
+    if(action==='like') notify('success');
+    else if(action==='dislike') impact('heavy');
+    else tick();
     setPopAction(action);
     popV.setValue(0);
     Animated.sequence([
@@ -120,19 +141,27 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
     const toY=action==='next'?-700:60;
     Animated.timing(pan,{toValue:{x:toX,y:toY},duration:220,useNativeDriver:false}).start(()=>commitSwipe(action));
   }
-  function settleRelease(dx:number,dy:number){
-    if(dx>FLING_X) flingOut('like');
-    else if(dx<-FLING_X) flingOut('dislike');
-    else if(dy<-FLING_Y) flingOut('next');
+  // dx/dy = how far the card moved; vx/vy = release velocity. A fast flick
+  // commits even when the card hasn't travelled past the distance threshold,
+  // so the gesture feels responsive instead of requiring a long drag.
+  function settleRelease(dx:number,dy:number,vx=0,vy=0){
+    const fastX=Math.abs(vx)>0.4, fastUp=vy<-0.4;
+    if(dx>FLING_X||(fastX&&vx>0&&dx>40)) flingOut('like');
+    else if(dx<-FLING_X||(fastX&&vx<0&&dx<-40)) flingOut('dislike');
+    else if(dy<-FLING_Y||(fastUp&&dy<-40)) flingOut('next');
     else Animated.spring(pan,{toValue:{x:0,y:0},friction:5,useNativeDriver:false}).start();
   }
 
   const responder=useRef(PanResponder.create({
     onMoveShouldSetPanResponder:(_,g)=>Math.abs(g.dx)>6||Math.abs(g.dy)>6,
     onPanResponderMove:Animated.event([null,{dx:pan.x,dy:pan.y}],{useNativeDriver:false}),
-    onPanResponderRelease:(_,g)=>settleRelease(g.dx,g.dy),
+    onPanResponderRelease:(_,g)=>settleRelease(g.dx,g.dy,g.vx,g.vy),
   })).current;
   const panHandlers=Platform.OS==='web'?{}:responder.panHandlers;
+  // On native a pure tap (no drag) opens the book; a drag is claimed by the
+  // PanResponder above and cancels this press. Web handles tap in its own
+  // pointerup listener, so leave it undefined there to avoid double-firing.
+  const tapToOpen=Platform.OS==='web'?undefined:()=>{ if(cur) onOpenBook(cur.id); };
 
   // Web: direct pointer listeners; small movement = tap → open the book page
   const cardRef=useRef<any>(null);
@@ -158,6 +187,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
 
   function doVersus(winnerId:string){
     if(pool.length<2) return;
+    impact('light');
     updateElo(pool.map(b=>b.id),winnerId);
     setPairIdx(i=>i+1);
     if(!muted) try{ beep(660,0.1,'triangle',0.06,0); beep(990,0.12,'triangle',0.05,0.07); }catch{}
@@ -215,7 +245,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
             {/* draggable card */}
             <Animated.View ref={cardRef} {...panHandlers}
               style={{alignItems:'center',transform:[{translateX:pan.x},{translateY:pan.y},{rotate}],cursor:'grab',touchAction:'none'} as any}>
-              <View>
+              <TouchableOpacity activeOpacity={0.92} onPress={tapToOpen}>
                 {/* glow ring tinted by drag direction */}
                 <Animated.View pointerEvents="none" style={{position:'absolute',top:-4,left:-4,right:-4,bottom:-4,borderRadius:12,borderWidth:3,borderColor:colors.accent,opacity:glowLike}}/>
                 <Animated.View pointerEvents="none" style={{position:'absolute',top:-4,left:-4,right:-4,bottom:-4,borderRadius:12,borderWidth:3,borderColor:colors.danger,opacity:glowNope}}/>
@@ -230,7 +260,7 @@ export default function SwipeModal({visible,onClose,onOpenBook}:Props){
                 <Animated.View style={{position:'absolute',bottom:10,alignSelf:'center',opacity:laterOpacity,borderWidth:3,borderColor:colors.text3,paddingHorizontal:10,paddingVertical:4,borderRadius:8,backgroundColor:'rgba(90,78,58,0.22)'}}>
                   <Text style={{fontFamily:fonts.sansBold,fontSize:15,color:colors.text2,letterSpacing:1.5}}>SKIP ↑</Text>
                 </Animated.View>
-              </View>
+              </TouchableOpacity>
               <Text style={{fontFamily:fonts.serifBold,fontSize:20,color:colors.text,marginTop:16,textAlign:'center'}}>{cur.title}</Text>
               <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text3,marginBottom:6,textAlign:'center'}}>{cur.author}</Text>
               <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text2,textAlign:'center',maxWidth:280,lineHeight:17}} numberOfLines={3}>{cur.synopsis}</Text>

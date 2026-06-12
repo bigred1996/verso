@@ -2,6 +2,10 @@ import {Tabs} from 'expo-router';
 import Svg,{Path,Circle,Rect,Line,Polygon} from 'react-native-svg';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {colors,fonts} from '../../constants/theme';
+import {tick} from '../../utils/haptics';
+
+// A light haptic tick every time a main tab is tapped.
+const hapticTab={tabPress:()=>tick()};
 
 function Icon({name,color}:{name:string;color:any}){
   const p={stroke:color,strokeWidth:1.6,fill:'none',strokeLinecap:'round' as const,strokeLinejoin:'round' as const};
@@ -17,10 +21,10 @@ function Icon({name,color}:{name:string;color:any}){
 export default function TabLayout(){
   const insets=useSafeAreaInsets();
   return <Tabs screenOptions={{tabBarActiveTintColor:colors.accent,tabBarInactiveTintColor:colors.text3,tabBarStyle:{backgroundColor:colors.surface,borderTopColor:colors.border,borderTopWidth:1,height:60+insets.bottom,paddingBottom:8+insets.bottom,paddingTop:8},tabBarLabelStyle:{fontFamily:fonts.sansMedium,fontSize:10,letterSpacing:0.3},headerShown:false}}>
-    <Tabs.Screen name="index"   options={{title:'Today',  tabBarIcon:({color})=><Icon name="today" color={color}/>}}/>
-    <Tabs.Screen name="discover" options={{title:'Discover',tabBarIcon:({color})=><Icon name="discover" color={color}/>}}/>
-    <Tabs.Screen name="social" options={{title:'Social',  tabBarIcon:({color})=><Icon name="social" color={color}/>}}/>
-    <Tabs.Screen name="shelf"  options={{title:'Shelf',   tabBarIcon:({color})=><Icon name="shelf" color={color}/>}}/>
+    <Tabs.Screen name="index"   options={{title:'Today',  tabBarIcon:({color})=><Icon name="today" color={color}/>}} listeners={hapticTab}/>
+    <Tabs.Screen name="discover" options={{title:'Discover',tabBarIcon:({color})=><Icon name="discover" color={color}/>}} listeners={hapticTab}/>
+    <Tabs.Screen name="social" options={{title:'Social',  tabBarIcon:({color})=><Icon name="social" color={color}/>}} listeners={hapticTab}/>
+    <Tabs.Screen name="shelf"  options={{title:'Shelf',   tabBarIcon:({color})=><Icon name="shelf" color={color}/>}} listeners={hapticTab}/>
     <Tabs.Screen name="search"  options={{href:null}}/>
     <Tabs.Screen name="profile" options={{href:null}}/>
   </Tabs>;

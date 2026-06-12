@@ -1,7 +1,50 @@
-import React,{useState,useEffect} from 'react';
-import {Modal,View,Text,ScrollView,TouchableOpacity,TextInput,SafeAreaView,StatusBar,Platform,Share} from 'react-native';
+import React,{useState,useEffect,useRef} from 'react';
+import {Modal,View,Text,ScrollView,TouchableOpacity,TextInput,SafeAreaView,StatusBar,Platform,Share,PanResponder} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {colors,spacing,fonts,type,radius,shadow} from '../constants/theme';
+import {tick,notify,impact} from '../utils/haptics';
+
+function ratingBlurb(v:number){
+  if(v>=5) return 'Instant favourite';
+  if(v>=4) return 'Loved it';
+  if(v>=3) return 'Solid read';
+  if(v>=2) return 'It was okay';
+  return 'Not for you — noted';
+}
+
+// Drag across the row to set a rating in half-star steps; a tap still works.
+// Children are pointerEvents:none so the row itself owns the gesture and
+// locationX maps cleanly to a star value. Ticks on each half-step change.
+function RatingSlider({value,onChange,onCommit,size=22}:{value:number;onChange:(v:number)=>void;onCommit:(v:number)=>void;size?:number}){
+  const w=useRef(0);
+  const last=useRef(value);
+  function valFromX(x:number){
+    const width=w.current||1;
+    let v=Math.round((Math.max(0,Math.min(1,x/width))*5)*2)/2;
+    if(v<0.5) v=0.5; if(v>5) v=5;
+    return v;
+  }
+  const pan=useRef(PanResponder.create({
+    onStartShouldSetPanResponder:()=>true,
+    onMoveShouldSetPanResponder:()=>true,
+    onPanResponderGrant:e=>{const v=valFromX(e.nativeEvent.locationX);last.current=v;onChange(v);tick();},
+    onPanResponderMove:e=>{const v=valFromX(e.nativeEvent.locationX);if(v!==last.current){last.current=v;onChange(v);tick();}},
+    onPanResponderRelease:()=>onCommit(last.current),
+    onPanResponderTerminate:()=>onCommit(last.current),
+  })).current;
+  return <View onLayout={e=>{w.current=e.nativeEvent.layout.width;}} {...pan.panHandlers}
+    style={{flexDirection:'row',cursor:'pointer',touchAction:'none'} as any}>
+    {[1,2,3,4,5].map(n=>{const fill=value>=n?1:value>=n-0.5?0.5:0;
+      return <View key={n} pointerEvents="none" style={{padding:2}}>
+        <View>
+          <Text style={{fontSize:size,color:colors.text3}}>★</Text>
+          {fill>0&&<View style={{position:'absolute',overflow:'hidden',width:fill===1?'100%':'50%'}}>
+            <Text style={{fontSize:size,color:colors.accent}}>★</Text>
+          </View>}
+        </View>
+      </View>;})}
+  </View>;
+}
 import {BOOKS,PAGE_COUNTS,AUTHOR_DATA,BOOK_TAGS,FRIEND_BOOK,FRIENDS,BOOK_VIBES,BOOK_QUOTES} from '../data/books';
 import type {ShelfStatus,Format} from '../data/books';
 import {useStore,MOODS,PACES,DNF_REASONS} from '../store';
@@ -38,6 +81,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
   const [showRrForm,setShowRrForm]=useState(false);
   const [tagInput,setTagInput]=useState('');
   const [shareFeedback,setShareFeedback]=useState<string|null>(null);
+  const [ratedToast,setRatedToast]=useState<string|null>(null);
   const [revMode,setRevMode]=useState<'long'|'hot'>('hot');
   const [hot,setHot]=useState('');
   const [overall,setOverall]=useState('');
@@ -84,17 +128,6 @@ export default function BookDetailModal({bookId,onClose}:Props){
   function toggleFeel(m:string){ setFeelMoods(p=>p.includes(m)?p.filter(x=>x!==m):p.length>=3?p:[...p,m]); }
   function saveFeel(){ setBookMoods(bid,feelMoods,feelPace||''); }
 
-  function Star({n,value,onPress,size=28}:{n:number;value:number;onPress:(v:number)=>void;size?:number}){
-    const fill=value>=n?1:value>=n-0.5?0.5:0;
-    return <TouchableOpacity onPress={()=>onPress(value===n?n-0.5:value===n-0.5?0:n)} style={{padding:2}}>
-      <View>
-        <Text style={{fontSize:size,color:colors.text3}}>★</Text>
-        {fill>0&&<View style={{position:'absolute',overflow:'hidden',width:fill===1?'100%':'50%'}}>
-          <Text style={{fontSize:size,color:colors.accent}}>★</Text>
-        </View>}
-      </View>
-    </TouchableOpacity>;
-  }
 
   function saveJournalEntry(){
     if(!bid) return;
@@ -175,15 +208,18 @@ export default function BookDetailModal({bookId,onClose}:Props){
 
           {/* Favourite + your rating */}
           <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingTop:12,borderTopWidth:1,borderTopColor:colors.border}}>
-            <TouchableOpacity onPress={()=>toggleFavorite(bid)} style={{flexDirection:'row',alignItems:'center',gap:6}}>
+            <TouchableOpacity onPress={()=>{toggleFavorite(bid);impact('light');}} style={{flexDirection:'row',alignItems:'center',gap:6}}>
               <Text style={{fontSize:18,color:isFav?colors.accent:colors.text3}}>{isFav?'♥':'♡'}</Text>
               <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:isFav?colors.accent:colors.text3}}>{isFav?'Favourite':'Favourite'}</Text>
             </TouchableOpacity>
             <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
-              <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{rat?`${rat}★`:'Rate'}</Text>
-              <View style={{flexDirection:'row'}}>{[1,2,3,4,5].map(s=><Star key={s} n={s} value={rat||0} size={22} onPress={v=>setRating(bid,v)}/>)}</View>
+              <Text style={{fontFamily:fonts.sans,fontSize:11,color:colors.text3}}>{rat?`${rat}★`:'Drag to rate'}</Text>
+              <RatingSlider value={rat||0} onChange={v=>setRating(bid,v)} onCommit={v=>{notify('success');setRatedToast(`${v}★ · ${ratingBlurb(v)}`);setTimeout(()=>setRatedToast(null),1900);}}/>
             </View>
           </View>
+          {ratedToast&&<View style={{marginTop:10,alignSelf:'flex-end',flexDirection:'row',alignItems:'center',gap:6,backgroundColor:colors.accentDim,paddingHorizontal:12,paddingVertical:7,borderRadius:radius.pill}}>
+            <Text style={{fontFamily:fonts.sansBold,fontSize:11,color:colors.accent}}>✓ Rated {ratedToast}</Text>
+          </View>}
         </View>
 
         {/* ── TAB BAR ── */}
@@ -393,7 +429,7 @@ export default function BookDetailModal({bookId,onClose}:Props){
           <View style={card}>
             <Text style={secTitle}>Your Shelf</Text>
             <View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
-              {SHELF_OPTS.map(o=>{const active=sh===o.k;return <TouchableOpacity key={o.l} onPress={()=>setShelf(bid,active?null:o.k)}
+              {SHELF_OPTS.map(o=>{const active=sh===o.k;return <TouchableOpacity key={o.l} onPress={()=>{setShelf(bid,active?null:o.k);if(active)tick();else impact('light');}}
                 style={[chip,active&&activeChip]}><Text style={{fontFamily:fonts.sansMedium,fontSize:13,color:active?colors.accent:colors.text2}}>{o.l}</Text></TouchableOpacity>;})}
             </View>
           </View>

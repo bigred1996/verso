@@ -19,6 +19,7 @@ interface State {
   customBooks:Book[]; follows:Record<string,boolean>; challengeJoined:Record<string,boolean>;
   swipeData:Record<string,'like'|'dislike'|'next'>; swipeEvents:SwipeEvent[]; eloRatings:Record<string,number>; streakDays:string[];
   clubMessages:Record<string,{user:string;text:string;ts:string}[]>;
+  feedComments:Record<string,{user:string;text:string;ts:string}[]>; // social post id → comment thread
   reviews:Record<string,Review>;
   buddyReads:BuddyRead[];
   favorites:string[];
@@ -33,6 +34,7 @@ interface State {
   setShelf:(id:string,s:ShelfStatus|null)=>void;
   recordSwipe:(bookId:string,action:'like'|'dislike'|'next')=>void;
   markSwipesSynced:(upToTs:number)=>void;
+  addComment:(postId:string,text:string)=>void;
   setRating:(id:string,v:number)=>void;
   setFormat:(id:string,f:Format|null)=>void;
   addCustomBook:(b:Book)=>void;
@@ -76,6 +78,11 @@ export const useStore = create<State>()(persist((set)=>({
   journal:{'remains-of-the-day':{page:184,entries:[{date:'Jun 6',page:48,note:"Stevens is already insufferable."},{date:'Jun 7',page:112,note:"The repression is doing something to me."},{date:'Jun 8',page:184,note:"I am not okay."}]}},
   userTags:{}, customBooks:[], follows:{}, challengeJoined:{'literary-dozen':true},
   swipeData:{}, swipeEvents:[], eloRatings:{}, streakDays:['May 28','May 29','May 30','Jun 1','Jun 2','Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8'], clubMessages:{}, reviews:{},
+  feedComments:{
+    a1:[{user:'juno',text:'Chapter 3 is a war crime. Genuinely.',ts:'1h'},{user:'marcus',text:'ok but the prose though',ts:'47m'}],
+    a2:[{user:'priya',text:'the bravest five stars I have ever seen',ts:'4h'}],
+    a7:[{user:'elif',text:"I will NOT fight you — you're right.",ts:'2d'}],
+  },
   buddyReads:[{bookId:'intermezzo',partner:'elif',myPage:67,theirPage:103,note:"She's winning. As always."}],
   favorites:['stoner','remains-of-the-day','pachinko'],
   dnfReasons:{}, annualGoal:30, authorFollows:{'Sally Rooney':true,'Kazuo Ishiguro':true}, bookMoods:{},
@@ -90,6 +97,7 @@ export const useStore = create<State>()(persist((set)=>({
     swipeEvents:[...(st.swipeEvents||[]),{bookId,action,ts:Date.now(),synced:false}],
   })),
   markSwipesSynced:(upToTs)=>set(st=>({swipeEvents:(st.swipeEvents||[]).map(e=>e.ts<=upToTs?{...e,synced:true}:e)})),
+  addComment:(postId,text)=>set(st=>({feedComments:{...st.feedComments,[postId]:[...(st.feedComments?.[postId]||[]),{user:'you',text,ts:'now'}]}})),
   setRating:(id,v)=>set(st=>({ratings:{...st.ratings,[id]:v}})),
   setFormat:(id,f)=>set(st=>{ const fm={...st.formats}; if(f===null) delete fm[id]; else fm[id]=f; return {formats:fm}; }),
   addCustomBook:(b)=>set(st=>({customBooks:[...st.customBooks,b]})),

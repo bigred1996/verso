@@ -11,6 +11,7 @@ import BookDetailModal from '../../components/BookDetailModal';
 import ChallengeModal from '../../components/ChallengeModal';
 import AuthorModal from '../../components/AuthorModal';
 import FriendProfileModal from '../../components/FriendProfileModal';
+import {tick,impact} from '../../utils/haptics';
 
 const SUBS=['Feed','Challenges','Authors'] as const;
 type Sub=typeof SUBS[number];
@@ -19,7 +20,7 @@ const fr=(id:string)=>FRIENDS.find(f=>f.id===id);
 export default function SocialScreen(){
   const insets=useSafeAreaInsets();
   const router=useRouter();
-  const {authorFollows,toggleAuthorFollow,customBooks,userChallenges,createChallenge}=useStore();
+  const {authorFollows,toggleAuthorFollow,customBooks,userChallenges,createChallenge,feedComments,addComment}=useStore();
   const all=[...BOOKS,...(Array.isArray(customBooks)?customBooks:[])];
   const [sub,setSub]=useState<Sub>('Feed');
   const [detailId,setDetailId]=useState<string|null>(null);
@@ -27,6 +28,14 @@ export default function SocialScreen(){
   const [authorOpen,setAuthorOpen]=useState<string|null>(null);
   const [friendOpen,setFriendOpen]=useState<string|null>(null);
   const [reacted,setReacted]=useState<Record<string,boolean>>({});
+  const [openThread,setOpenThread]=useState<string|null>(null);
+  const [draft,setDraft]=useState('');
+
+  function toggleThread(id:string){ tick(); setDraft(''); setOpenThread(o=>o===id?null:id); }
+  function submitComment(id:string){
+    const t=draft.trim(); if(!t) return;
+    addComment(id,t); setDraft(''); impact('light');
+  }
   const [chQ,setChQ]=useState(''); const [chTitle,setChTitle]=useState(''); const [chDesc,setChDesc]=useState(''); const [chGoal,setChGoal]=useState('12'); const [chCreating,setChCreating]=useState(false);
 
   const twins=[...FRIENDS].sort((a,b)=>b.match-a.match);
@@ -80,7 +89,9 @@ export default function SocialScreen(){
           const f=fr(it.user);const b=it.bookId?all.find(x=>x.id===it.bookId):null;
           const seed=it.id.split('').reduce((n,c)=>n+c.charCodeAt(0),0);
           const likeCount=(seed%19)+3+(reacted[it.id]?1:0);
-          const commentCount=seed%7;
+          const thread=feedComments[it.id]||[];
+          const commentCount=thread.length;
+          const threadOpen=openThread===it.id;
           const liked=!!reacted[it.id];
           const handle='@'+(f?.name.split(' ')[0].toLowerCase()||'reader')+'.reads';
           return <View key={it.id} style={{backgroundColor:colors.surface,borderRadius:radius.lg,marginHorizontal:spacing.lg,marginBottom:12,padding:spacing.lg,...shadow.soft}}>
@@ -118,19 +129,45 @@ export default function SocialScreen(){
 
             {/* action bar */}
             <View style={{flexDirection:'row',alignItems:'center',gap:22,paddingTop:2}}>
-              <TouchableOpacity onPress={()=>setReacted(r=>({...r,[it.id]:!r[it.id]}))} style={{flexDirection:'row',alignItems:'center',gap:5}}>
+              <TouchableOpacity onPress={()=>{const willLike=!reacted[it.id];setReacted(r=>({...r,[it.id]:!r[it.id]}));if(willLike)impact('light');else tick();}} style={{flexDirection:'row',alignItems:'center',gap:5}}>
                 <Text style={{fontSize:16,color:liked?colors.danger:colors.text3}}>{liked?'♥':'♡'}</Text>
                 <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:liked?colors.danger:colors.text3}}>{likeCount}</Text>
               </TouchableOpacity>
-              <TouchableOpacity disabled={!f} onPress={()=>f&&setFriendOpen(f.id)} style={{flexDirection:'row',alignItems:'center',gap:5}}>
-                <Text style={{fontSize:14,color:colors.text3}}>💬</Text>
-                <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text3}}>{commentCount}</Text>
+              <TouchableOpacity onPress={()=>toggleThread(it.id)} style={{flexDirection:'row',alignItems:'center',gap:5}}>
+                <Text style={{fontSize:14,color:threadOpen?colors.accent:colors.text3}}>💬</Text>
+                <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:threadOpen?colors.accent:colors.text3}}>{commentCount>0?commentCount:'Comment'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{flexDirection:'row',alignItems:'center',gap:5}}>
                 <Text style={{fontSize:14,color:colors.text3}}>↗</Text>
                 <Text style={{fontFamily:fonts.sansMedium,fontSize:12,color:colors.text3}}>Share</Text>
               </TouchableOpacity>
             </View>
+
+            {/* comment thread + composer */}
+            {threadOpen&&<View style={{marginTop:12,paddingTop:12,borderTopWidth:1,borderTopColor:colors.border,gap:12}}>
+              {thread.length===0&&<Text style={{fontFamily:fonts.sans,fontSize:12,color:colors.text3,fontStyle:'italic'}}>No comments yet — start the thread.</Text>}
+              {thread.map((c,ci)=>{const cf=c.user==='you'?null:fr(c.user);const isYou=c.user==='you';
+                const cInit=isYou?'C':(cf?.init||'?');const cColor=isYou?colors.accent:(cf?.color||colors.accent);const cName=isYou?'You':(cf?.name.split(' ')[0]||'Reader');
+                return <View key={ci} style={{flexDirection:'row',gap:10,alignItems:'flex-start'}}>
+                  <TouchableOpacity disabled={isYou||!cf} onPress={()=>cf&&setFriendOpen(cf.id)} style={{width:30,height:30,borderRadius:15,backgroundColor:cColor+'28',alignItems:'center',justifyContent:'center',marginTop:1}}>
+                    <Text style={{fontFamily:fonts.sansBold,fontSize:11,color:cColor}}>{cInit}</Text>
+                  </TouchableOpacity>
+                  <View style={{flex:1,backgroundColor:colors.bg,borderRadius:radius.md,paddingHorizontal:12,paddingVertical:8}}>
+                    <View style={{flexDirection:'row',alignItems:'center',gap:6,marginBottom:2}}>
+                      <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:colors.text}}>{cName}</Text>
+                      <Text style={{fontFamily:fonts.sans,fontSize:10,color:colors.text3}}>{c.ts}</Text>
+                    </View>
+                    <Text style={{fontFamily:fonts.sans,fontSize:13,color:colors.text2,lineHeight:18}}>{c.text}</Text>
+                  </View>
+                </View>;})}
+              <View style={{flexDirection:'row',gap:8,alignItems:'center'}}>
+                <TextInput style={[inp,{flex:1}]} placeholder="Add a comment…" placeholderTextColor={colors.text3} value={draft} onChangeText={setDraft}
+                  returnKeyType="send" onSubmitEditing={()=>submitComment(it.id)} blurOnSubmit={false}/>
+                <TouchableOpacity disabled={!draft.trim()} onPress={()=>submitComment(it.id)} style={{paddingHorizontal:16,paddingVertical:10,borderRadius:radius.pill,backgroundColor:draft.trim()?colors.accent:colors.surface2}}>
+                  <Text style={{fontFamily:fonts.sansBold,fontSize:12,color:draft.trim()?colors.accentText:colors.text3}}>Post</Text>
+                </TouchableOpacity>
+              </View>
+            </View>}
           </View>;})}
         <View style={{height:24}}/>
       </View>}
